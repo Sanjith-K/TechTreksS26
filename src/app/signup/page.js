@@ -1,0 +1,130 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
+export default function SignUpPage() {
+    return (
+        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
+            {/* Background */}
+            <div className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
+                <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
+            </div>
+
+            {/* Stars */}
+            <div className="pointer-events-none absolute inset-0">
+                {[...Array(60)].map((_, i) => {
+                    const size = Math.random() * 2 + 1;
+                    const left = Math.random() * 100;
+                    const top = Math.random() * 100;
+                    const delay = Math.random() * 3;
+
+                    return (
+                        <span
+                            key={i}
+                            className="star"
+                            style={{
+                                width: `${size}px`,
+                                height: `${size}px`,
+                                left: `${left}%`,
+                                top: `${top}%`,
+                                animationDelay: `${delay}s`,
+                            }}
+                        />
+                    );
+                })}
+            </div>
+
+            {/* Content */}
+            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 py-6">
+                {/* Top header with logo */}
+                <header className="flex items-center justify-between">
+                    <div className="flex items-end gap-1">
+                        <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
+                            Be1
+                        </h1>
+                        <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">
+                            space
+                        </span>
+                    </div>
+                </header>
+
+                {/* Back */}
+                <Link
+                    href="/signin"
+                    className="mt-6 flex w-fit items-center gap-2 text-sm text-white/70 hover:text-white"
+                >
+                    <ArrowLeft size={16} />
+                    Back
+                </Link>
+
+                {/* Centered card */}
+                <div className="flex min-h-[calc(100vh-190px)] items-center justify-center">
+                    <div className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md">
+                        <div className="text-center">
+                            <h1 className="font-[Be1space] text-4xl tracking-wide">Create Account</h1>
+                            <p className="mt-3 text-white/55">
+                                Join Be1space to save your favorite spots and build your study routine.
+                            </p>
+                        </div>
+
+                        <div className="mt-8 flex flex-col gap-4">
+                            <input
+                                type="text"
+                                placeholder="Full name"
+                                className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                            />
+
+                            <input
+                                type="email"
+                                placeholder="NYU email or personal email"
+                                className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                            />
+
+                            <input
+                                type="password"
+                                placeholder="Create password"
+                                className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                            />
+
+                            <input
+                                type="password"
+                                placeholder="Confirm password"
+                                className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                            />
+
+                            <button className="mt-2 rounded-full bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.35)] hover:bg-blue-700">
+                                Create Account
+                            </button>
+                        </div>
+
+                        <div className="mt-6 text-center text-sm text-white/55">
+                            <p>
+                                Already have an account?{" "}
+                                <Link href="/signin" className="text-cyan-300 hover:text-cyan-200">
+                                    Sign in
+                                </Link>
+                            </p>
+                        </div>
+
+                        <div className="mt-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-white/10" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-[#13213a] px-3 text-white/45">or</span>
+                                </div>
+                            </div>
+
+                            <button className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10">
+                                Continue with Google
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    );
+}

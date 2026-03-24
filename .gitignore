@@ -2,3 +2,4 @@ echo "venv/
 .env
 __pycache__/
 *.pyc" > .gitignorenode_modules/
+.next/
