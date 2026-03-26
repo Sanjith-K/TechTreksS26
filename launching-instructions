@@ -1,0 +1,17 @@
+to launch, use 2 seperate terminals. this must be done to differentiate between front and back end, as they run on 2 diff servers
+and communicate thru api. i prefer launching backend on vscode/ide and front end on terminal.
+
+# back end cmnds (fastapi)
+cd /Users/yourname/Desktop/Be1_Space
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+# front end cmnds (nextjs)
+cd /Users/yourname/Desktop/Be1_Space
+npm install
+npm run dev
+
+backend on 8000
+front end on 3000
+
+it wont work if u dont launch backend all data will be empty
