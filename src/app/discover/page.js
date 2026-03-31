@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
+import StarField from "../../components/StarField";
+import LoadingState from "../../components/LoadingState";
+import EmptyState from "../../components/EmptyState";
+import ErrorState from "../../components/ErrorState";
 import {
     House,
     Map,
@@ -81,6 +85,12 @@ const nyuSpaces = [
     },
 ];
 
+const allSections = [
+    { id: "featured", title: "Featured Spots", spaces: featuredSpaces },
+    { id: "popular", title: "Popular This Week", spaces: popularSpaces },
+    { id: "nyu", title: "NYU Spaces", spaces: nyuSpaces },
+];
+
 function Section({ title, spaces }) {
     return (
         <section className="mt-8">
@@ -108,6 +118,85 @@ export default function DiscoverPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [priceValue, setPriceValue] = useState(50);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [sections, setSections] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let isActive = true;
+
+        async function loadSections() {
+            setLoading(true);
+            setError("");
+
+            try {
+                const loadedSections = await Promise.resolve(allSections);
+
+                if (isActive) {
+                    setSections(loadedSections);
+                }
+            } catch {
+                if (isActive) {
+                    setError("We couldn't load study spaces right now.");
+                }
+            } finally {
+                if (isActive) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        loadSections();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    const filteredSections = useMemo(() => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+
+        if (!normalizedQuery) {
+            return sections;
+        }
+
+        return sections
+            .map((section) => ({
+                ...section,
+                spaces: section.spaces.filter((space) => {
+                    const searchableText = [
+                        space.name,
+                        space.address,
+                        space.vibe,
+                        space.distance,
+                        ...(space.tags ?? []),
+                    ]
+                        .join(" ")
+                        .toLowerCase();
+
+                    return searchableText.includes(normalizedQuery);
+                }),
+            }))
+            .filter((section) => section.spaces.length > 0);
+    }, [searchQuery, sections]);
+
+    function handleRetry() {
+        setLoading(true);
+        setError("");
+        setSections([]);
+
+        Promise.resolve(allSections)
+            .then((loadedSections) => {
+                setSections(loadedSections);
+            })
+            .catch(() => {
+                setError("We couldn't load study spaces right now.");
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }
 
     return (
         <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
@@ -118,28 +207,7 @@ export default function DiscoverPage() {
             </div>
 
             {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <StarField />
             {/* Content */}
             <div className="relative z-10 mx-auto max-w-7xl px-8 pb-28 pt-6">
                 {/* Header */}
@@ -173,6 +241,8 @@ export default function DiscoverPage() {
                     <input
                         type="text"
                         placeholder="Search cafes, libraries, spaces..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full rounded-full border border-white/8 bg-white/8 px-5 py-4 text-lg text-white outline-none backdrop-blur-md placeholder:text-white/35"
                     />
 
@@ -411,9 +481,39 @@ export default function DiscoverPage() {
 
                     {/* Sections */}
                     <div className="min-w-0 flex-1">
-                        <Section title="Featured Spots" spaces={featuredSpaces} />
-                        <Section title="Popular This Week" spaces={popularSpaces} />
-                        <Section title="NYU Spaces" spaces={nyuSpaces} />
+                        {loading ? (
+                            <LoadingState
+                                title="Loading spaces"
+                                description="Fetching the best nearby places to study around NYU."
+                            />
+                        ) : error ? (
+                            <ErrorState
+                                title="Unable to load spaces"
+                                description={error}
+                                onRetry={handleRetry}
+                            />
+                        ) : filteredSections.length === 0 ? (
+                            <EmptyState
+                                title="No spaces found"
+                                description="Try a different search term or clear your filters to see more study spots."
+                                action={
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="rounded-full border border-white/12 bg-white/8 px-5 py-2.5 text-sm text-white/85 hover:bg-white/12"
+                                    >
+                                        Clear Search
+                                    </button>
+                                }
+                            />
+                        ) : (
+                            filteredSections.map((section) => (
+                                <Section
+                                    key={section.id}
+                                    title={section.title}
+                                    spaces={section.spaces}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

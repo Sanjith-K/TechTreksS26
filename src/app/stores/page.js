@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import StarField from "../../components/StarField";
 import {
     ArrowLeft,
     Share2,
@@ -32,28 +33,7 @@ export default function StorePage() {
             </div>
 
             {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <StarField />
 
             {/* Content */}
             <div className="relative z-10 mx-auto max-w-5xl px-6 pb-24 pt-4">

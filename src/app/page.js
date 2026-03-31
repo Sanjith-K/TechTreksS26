@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { House, Map, GraduationCap, Heart, User } from "lucide-react";
+import StarField from "../components/StarField";
 
 export default function HomePage() {
   return (
@@ -12,28 +13,7 @@ export default function HomePage() {
       </div>
 
       {/* Stars */}
-      <div className="pointer-events-none absolute inset-0">
-        {[...Array(60)].map((_, i) => {
-          const size = Math.random() * 2 + 1; // 1px–3px
-          const left = Math.random() * 100;
-          const top = Math.random() * 100;
-          const delay = Math.random() * 3;
-
-          return (
-            <span
-              key={i}
-              className="star"
-              style={{
-                width: `${size}px`,
-                height: `${size}px`,
-                left: `${left}%`,
-                top: `${top}%`,
-                animationDelay: `${delay}s`,
-              }}
-            />
-          );
-        })}
-      </div>
+      <StarField />
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-10 py-6">
 
