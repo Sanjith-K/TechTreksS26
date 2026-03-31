@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
 import {
@@ -52,7 +53,7 @@ function Section({ title, spaces, loading, hide }) {
             ) : (
                 <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                     {spaces.map((space) => (
-                        <Link key={space.id} href="/stores" className="block">
+                        <Link key={space.id} href={`/stores/${space.id}`} className="block">
                             <SpaceCard
                                 name={space.name}
                                 address={space.address}
@@ -94,7 +95,7 @@ export default function DiscoverPage() {
     const [showExtraPanel, setShowExtraPanel] = useState(false);
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
+        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
             {/* Background */}
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
@@ -125,8 +126,7 @@ export default function DiscoverPage() {
                 })}
             </div>
             {/* Content */}
-            <div className="relative z-10 mx-auto max-w-7xl px-8 pb-28 pt-6">
-                {/* Header */}
+            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -138,9 +138,7 @@ export default function DiscoverPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold">
-                            Z
-                        </div>
+                        <AuthButton />
 
                         <button
                             onClick={() => setShowFilters(!showFilters)}
