@@ -21,6 +21,8 @@ const featuredSpaces = [
         price: "$",
         vibe: "Quiet",
         distance: "0.2 mi",
+        category: "Libraries",
+        features: ["WiFi", "Quiet", "Laptop OK", "Open Now", "Open Late"],
         tags: ["Deep Focus", "All-nighter"],
     },
     {
@@ -31,6 +33,8 @@ const featuredSpaces = [
         price: "$$",
         vibe: "Moderate",
         distance: "0.3 mi",
+        category: "Cafes",
+        features: ["WiFi", "Budget", "Open Now", "Laptop OK"],
         tags: ["Group Study", "Coffee Break"],
     },
 ];
@@ -44,6 +48,8 @@ const popularSpaces = [
         price: "$$$",
         vibe: "Moderate",
         distance: "0.3 mi",
+        category: "Cafes",
+        features: ["WiFi", "Laptop OK", "Open Now"],
         tags: ["Morning Study", "Quick Work"],
     },
     {
@@ -54,6 +60,8 @@ const popularSpaces = [
         price: "$",
         vibe: "Lively",
         distance: "0.1 mi",
+        category: "Lounges",
+        features: ["WiFi", "Open Now", "Laptop OK"],
         tags: ["Student Space", "Quick Meetup"],
     },
 ];
@@ -67,6 +75,8 @@ const nyuSpaces = [
         price: "$",
         vibe: "Quiet",
         distance: "0.2 mi",
+        category: "Coworking",
+        features: ["WiFi", "Quiet", "Open Now", "NYU Discount"],
         tags: ["Campus Spot", "Reading"],
     },
     {
@@ -77,17 +87,69 @@ const nyuSpaces = [
         price: "$",
         vibe: "Lively",
         distance: "0.1 mi",
+        category: "Lounges",
+        features: ["WiFi", "Open Now", "Laptop OK"],
         tags: ["Student Space", "Quick Meetup"],
     },
 ];
 
+const allSpaces = [
+    ...featuredSpaces.map((space) => ({ ...space, section: "Featured Spots" })),
+    ...popularSpaces.map((space) => ({ ...space, section: "Popular This Week" })),
+    ...nyuSpaces.map((space) => ({ ...space, section: "NYU Spaces" })),
+];
+
+const categoryOptions = ["All", "Cafes", "Libraries", "Coworking", "Lounges"];
+const quickFeatureOptions = ["WiFi", "Quiet", "Budget", "Open Now", "NYU Discount", "Laptop OK"];
+const vibeOptions = ["Quiet", "Moderate", "Lively"];
+const extraFeatureOptions = ["WiFi", "Outlets", "Laptop OK", "Bathroom", "NYU Discount"];
+const priceOptions = ["$", "$$", "$$$", "$$$$"];
+const distanceOptions = [
+    { label: "Within 0.5 mi", max: 0.5 },
+    { label: "Within 1 mi", max: 1 },
+    { label: "Within 2 mi", max: 2 },
+    { label: "Within 5 mi", max: 5 },
+];
+const priceThresholds = {
+    $: 25,
+    $$: 50,
+    $$$: 75,
+    $$$$: 100,
+};
+const starField = Array.from({ length: 60 }, (_, index) => ({
+    id: index,
+    size: Math.random() * 2 + 1,
+    left: Math.random() * 100,
+    top: Math.random() * 100,
+    delay: Math.random() * 3,
+}));
+
+function FilterChip({ active, children, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`rounded-full border px-4 py-2 text-sm transition ${active
+                ? "border-blue-500 bg-blue-600 text-white"
+                : "border-white/10 bg-white/8 text-white/80 hover:bg-white/12"
+                }`}
+        >
+            {children}
+        </button>
+    );
+}
+
 function Section({ title, spaces }) {
+    if (spaces.length === 0) {
+        return null;
+    }
+
     return (
         <section className="mt-8">
             <h2 className="mb-4 text-3xl font-semibold text-white">{title}</h2>
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 {spaces.map((space) => (
-                    <Link key={space.id} href="/stores" className="block">
+                    <Link key={`${title}-${space.id}`} href="/stores" className="block">
                         <SpaceCard
                             name={space.name}
                             address={space.address}
@@ -104,45 +166,141 @@ function Section({ title, spaces }) {
     );
 }
 
+function parseDistance(distance) {
+    return Number.parseFloat(distance);
+}
+
 export default function DiscoverPage() {
     const [showFilters, setShowFilters] = useState(false);
-    const [priceValue, setPriceValue] = useState(50);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [selectedQuickFeatures, setSelectedQuickFeatures] = useState([]);
+    const [priceValue, setPriceValue] = useState(100);
+    const [selectedVibes, setSelectedVibes] = useState([]);
+    const [selectedExtraFeatures, setSelectedExtraFeatures] = useState([]);
+    const [selectedPrices, setSelectedPrices] = useState([]);
+    const [selectedDistances, setSelectedDistances] = useState([]);
+
+    const toggleSelection = (value, selectedValues, setSelectedValues) => {
+        setSelectedValues((current) =>
+            current.includes(value)
+                ? current.filter((item) => item !== value)
+                : [...current, value]
+        );
+    };
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setSelectedCategory("All");
+        setSelectedQuickFeatures([]);
+        setPriceValue(100);
+        setSelectedVibes([]);
+        setSelectedExtraFeatures([]);
+        setSelectedPrices([]);
+        setSelectedDistances([]);
+    };
+
+    const activeFeatureFilters = [...selectedQuickFeatures, ...selectedExtraFeatures];
+
+    const filteredSpaces = allSpaces.filter((space) => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        const matchesSearch =
+            normalizedQuery.length === 0 ||
+            [
+                space.name,
+                space.address,
+                space.vibe,
+                space.category,
+                ...space.tags,
+                ...space.features,
+            ].some((value) => value.toLowerCase().includes(normalizedQuery));
+
+        const matchesCategory =
+            selectedCategory === "All" || space.category === selectedCategory;
+
+        const matchesQuickFeatures = selectedQuickFeatures.every((feature) =>
+            space.features.includes(feature)
+        );
+
+        const matchesExtraFeatures = selectedExtraFeatures.every((feature) =>
+            space.features.includes(feature)
+        );
+
+        const matchesVibe =
+            selectedVibes.length === 0 || selectedVibes.includes(space.vibe);
+
+        const matchesPriceButtons =
+            selectedPrices.length === 0 || selectedPrices.includes(space.price);
+
+        const matchesPriceSlider = priceThresholds[space.price] <= priceValue;
+
+        const spaceDistance = parseDistance(space.distance);
+        const matchesDistance =
+            selectedDistances.length === 0 ||
+            selectedDistances.some((limit) => spaceDistance <= limit);
+
+        return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesQuickFeatures &&
+            matchesExtraFeatures &&
+            matchesVibe &&
+            matchesPriceButtons &&
+            matchesPriceSlider &&
+            matchesDistance
+        );
+    });
+
+    const filteredSections = [
+        {
+            title: "Featured Spots",
+            spaces: filteredSpaces.filter((space) => space.section === "Featured Spots"),
+        },
+        {
+            title: "Popular This Week",
+            spaces: filteredSpaces.filter((space) => space.section === "Popular This Week"),
+        },
+        {
+            title: "NYU Spaces",
+            spaces: filteredSpaces.filter((space) => space.section === "NYU Spaces"),
+        },
+    ];
+
+    const hasActiveFilters =
+        searchQuery.trim().length > 0 ||
+        selectedCategory !== "All" ||
+        selectedQuickFeatures.length > 0 ||
+        selectedVibes.length > 0 ||
+        selectedExtraFeatures.length > 0 ||
+        selectedPrices.length > 0 ||
+        selectedDistances.length > 0 ||
+        priceValue !== 100;
 
     return (
         <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
-            {/* Background */}
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
             <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
+                {starField.map((star) => (
+                    <span
+                        key={star.id}
+                        className="star"
+                        style={{
+                            width: `${star.size}px`,
+                            height: `${star.size}px`,
+                            left: `${star.left}%`,
+                            top: `${star.top}%`,
+                            animationDelay: `${star.delay}s`,
+                        }}
+                    />
+                ))}
             </div>
-            {/* Content */}
+
             <div className="relative z-10 mx-auto max-w-7xl px-8 pb-28 pt-6">
-                {/* Header */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -159,6 +317,7 @@ export default function DiscoverPage() {
                         </div>
 
                         <button
+                            type="button"
                             onClick={() => setShowFilters(!showFilters)}
                             className="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
                         >
@@ -168,10 +327,11 @@ export default function DiscoverPage() {
                     </div>
                 </header>
 
-                {/* Search */}
                 <div className="mt-6">
                     <input
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search cafes, libraries, spaces..."
                         className="w-full rounded-full border border-white/8 bg-white/8 px-5 py-4 text-lg text-white outline-none backdrop-blur-md placeholder:text-white/35"
                     />
@@ -179,57 +339,48 @@ export default function DiscoverPage() {
                     <p className="mt-3 text-white/60">Near NYU Washington Square</p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <button className="rounded-full bg-blue-600 px-4 py-2 text-sm text-white">
-                            All
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Cafes
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Libraries
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Coworking
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Lounges
-                        </button>
+                        {categoryOptions.map((category) => (
+                            <FilterChip
+                                key={category}
+                                active={selectedCategory === category}
+                                onClick={() => setSelectedCategory(category)}
+                            >
+                                {category}
+                            </FilterChip>
+                        ))}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            WiFi
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Quiet
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Budget
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Open Now
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            NYU Discount
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Laptop OK
-                        </button>
-                        <button
+                        {quickFeatureOptions.map((feature) => (
+                            <FilterChip
+                                key={feature}
+                                active={selectedQuickFeatures.includes(feature)}
+                                onClick={() =>
+                                    toggleSelection(
+                                        feature,
+                                        selectedQuickFeatures,
+                                        setSelectedQuickFeatures
+                                    )
+                                }
+                            >
+                                {feature}
+                            </FilterChip>
+                        ))}
+                        <FilterChip
+                            active={showExtraPanel || selectedExtraFeatures.length > 0}
                             onClick={() => setShowExtraPanel(true)}
-                            className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80 hover:bg-white/12"
                         >
                             etc.
-                        </button>
+                        </FilterChip>
                     </div>
 
-                    {/* Extra pop-up filter panel */}
                     {showExtraPanel && (
                         <div className="mt-4 flex justify-center">
-                            <div className="w-full max-w-3xl rounded-2xl border border-white/8 bg-[#0f1b33]/85 p-6 backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.18)]">
+                            <div className="w-full max-w-3xl rounded-2xl border border-white/8 bg-[#0f1b33]/85 p-6 shadow-[0_0_40px_rgba(59,130,246,0.18)] backdrop-blur-xl">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-white">Filters</h3>
                                     <button
+                                        type="button"
                                         onClick={() => setShowExtraPanel(false)}
                                         className="text-white/60 hover:text-white"
                                     >
@@ -240,13 +391,20 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Noise Level</h4>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {["Quiet", "Moderate", "Lively"].map((item) => (
-                                            <button
+                                        {vibeOptions.map((item) => (
+                                            <FilterChip
                                                 key={item}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                                active={selectedVibes.includes(item)}
+                                                onClick={() =>
+                                                    toggleSelection(
+                                                        item,
+                                                        selectedVibes,
+                                                        setSelectedVibes
+                                                    )
+                                                }
                                             >
                                                 {item}
-                                            </button>
+                                            </FilterChip>
                                         ))}
                                     </div>
                                 </div>
@@ -254,13 +412,20 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Features</h4>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {["WiFi", "Outlets", "Laptop", "Bathroom", "NYU Discount"].map((item) => (
-                                            <button
+                                        {extraFeatureOptions.map((item) => (
+                                            <FilterChip
                                                 key={item}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                                active={selectedExtraFeatures.includes(item)}
+                                                onClick={() =>
+                                                    toggleSelection(
+                                                        item,
+                                                        selectedExtraFeatures,
+                                                        setSelectedExtraFeatures
+                                                    )
+                                                }
                                             >
                                                 {item}
-                                            </button>
+                                            </FilterChip>
                                         ))}
                                     </div>
                                 </div>
@@ -268,22 +433,58 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Price</h4>
                                     <div className="mt-2 flex gap-2">
-                                        {["$", "$$", "$$$", "$$$$"].map((p) => (
-                                            <button
-                                                key={p}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                        {priceOptions.map((price) => (
+                                            <FilterChip
+                                                key={price}
+                                                active={selectedPrices.includes(price)}
+                                                onClick={() =>
+                                                    toggleSelection(
+                                                        price,
+                                                        selectedPrices,
+                                                        setSelectedPrices
+                                                    )
+                                                }
                                             >
-                                                {p}
-                                            </button>
+                                                {price}
+                                            </FilterChip>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mt-5">
+                                    <h4 className="text-sm text-white/70">Distance</h4>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {distanceOptions.map((option) => (
+                                            <FilterChip
+                                                key={option.label}
+                                                active={selectedDistances.includes(option.max)}
+                                                onClick={() =>
+                                                    toggleSelection(
+                                                        option.max,
+                                                        selectedDistances,
+                                                        setSelectedDistances
+                                                    )
+                                                }
+                                            >
+                                                {option.label}
+                                            </FilterChip>
                                         ))}
                                     </div>
                                 </div>
 
                                 <div className="mt-6 flex gap-3">
-                                    <button className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5">
+                                    <button
+                                        type="button"
+                                        onClick={resetFilters}
+                                        className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5"
+                                    >
                                         Clear
                                     </button>
-                                    <button className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowExtraPanel(false)}
+                                        className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                                    >
                                         Apply
                                     </button>
                                 </div>
@@ -292,9 +493,7 @@ export default function DiscoverPage() {
                     )}
                 </div>
 
-                {/* Main layout */}
                 <div className="mt-8 flex gap-6">
-                    {/* Sidebar */}
                     <aside
                         className={`shrink-0 overflow-hidden rounded-2xl border border-white/8 bg-white/8 backdrop-blur-md transition-all duration-300 ${showFilters
                             ? "w-[280px] p-5 opacity-100"
@@ -306,6 +505,7 @@ export default function DiscoverPage() {
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-2xl font-semibold">Filters</h2>
                                     <button
+                                        type="button"
                                         onClick={() => setShowFilters(false)}
                                         className="text-white/60 hover:text-white"
                                     >
@@ -315,7 +515,9 @@ export default function DiscoverPage() {
 
                                 <div className="mt-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium text-white/85">Price Range</h3>
+                                        <h3 className="text-lg font-medium text-white/85">
+                                            Price Range
+                                        </h3>
                                         <span className="rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
                                             ${priceValue}
                                         </span>
@@ -323,15 +525,16 @@ export default function DiscoverPage() {
 
                                     <input
                                         type="range"
-                                        min="0"
+                                        min="25"
                                         max="100"
+                                        step="25"
                                         value={priceValue}
-                                        onChange={(e) => setPriceValue(e.target.value)}
+                                        onChange={(e) => setPriceValue(Number(e.target.value))}
                                         className="mt-4 w-full accent-blue-500"
                                     />
 
                                     <div className="mt-2 flex justify-between text-sm text-white/60">
-                                        <span>$0</span>
+                                        <span>$</span>
                                         <span>${priceValue}</span>
                                     </div>
                                 </div>
@@ -339,109 +542,165 @@ export default function DiscoverPage() {
                                 <div className="mt-6">
                                     <h3 className="text-lg font-medium text-white/85">Vibe</h3>
                                     <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Quiet
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Moderate
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Lively
-                                        </label>
+                                        {vibeOptions.map((vibe) => (
+                                            <label key={vibe} className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedVibes.includes(vibe)}
+                                                    onChange={() =>
+                                                        toggleSelection(
+                                                            vibe,
+                                                            selectedVibes,
+                                                            setSelectedVibes
+                                                        )
+                                                    }
+                                                />
+                                                {vibe}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
 
                                 <div className="mt-6">
-                                    <h3 className="text-lg font-medium text-white/85">Amenities</h3>
+                                    <h3 className="text-lg font-medium text-white/85">
+                                        Amenities
+                                    </h3>
                                     <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            WiFi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Laptop OK
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Power Outlets
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Food & Drinks
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Open Late
-                                        </label>
+                                        {quickFeatureOptions.map((feature) => (
+                                            <label
+                                                key={feature}
+                                                className="flex items-center gap-3"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedQuickFeatures.includes(feature)}
+                                                    onChange={() =>
+                                                        toggleSelection(
+                                                            feature,
+                                                            selectedQuickFeatures,
+                                                            setSelectedQuickFeatures
+                                                        )
+                                                    }
+                                                />
+                                                {feature}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
 
                                 <div className="mt-6">
                                     <h3 className="text-lg font-medium text-white/85">Distance</h3>
                                     <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 0.5 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 1 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 2 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 5 mi
-                                        </label>
+                                        {distanceOptions.map((option) => (
+                                            <label
+                                                key={option.label}
+                                                className="flex items-center gap-3"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedDistances.includes(option.max)}
+                                                    onChange={() =>
+                                                        toggleSelection(
+                                                            option.max,
+                                                            selectedDistances,
+                                                            setSelectedDistances
+                                                        )
+                                                    }
+                                                />
+                                                {option.label}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <button className="mt-8 w-full rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700">
-                                    Apply Filters
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="mt-8 w-full rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700"
+                                >
+                                    Clear Filters
                                 </button>
                             </>
                         )}
                     </aside>
 
-                    {/* Sections */}
                     <div className="min-w-0 flex-1">
-                        <Section title="Featured Spots" spaces={featuredSpaces} />
-                        <Section title="Popular This Week" spaces={popularSpaces} />
-                        <Section title="NYU Spaces" spaces={nyuSpaces} />
+                        <div className="rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-sm text-white/70 backdrop-blur-md">
+                            Showing {filteredSpaces.length} result
+                            {filteredSpaces.length === 1 ? "" : "s"}
+                            {hasActiveFilters ? " with filters applied" : ""}
+                            {activeFeatureFilters.length > 0
+                                ? ` • ${activeFeatureFilters.join(", ")}`
+                                : ""}
+                        </div>
+
+                        {filteredSpaces.length === 0 ? (
+                            <div className="mt-6 rounded-2xl border border-white/8 bg-white/8 px-6 py-10 text-center backdrop-blur-md">
+                                <h2 className="text-2xl font-semibold text-white">
+                                    No spaces match those filters
+                                </h2>
+                                <p className="mt-2 text-white/60">
+                                    Try widening the price range or clearing a few filters.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className="mt-5 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                                >
+                                    Reset Filters
+                                </button>
+                            </div>
+                        ) : (
+                            filteredSections.map((section) => (
+                                <Section
+                                    key={section.title}
+                                    title={section.title}
+                                    spaces={section.spaces}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Nav */}
             <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
-                    <Link href="/discover" className="flex flex-col items-center gap-1 text-purple-400">
+                    <Link
+                        href="/discover"
+                        className="flex flex-col items-center gap-1 text-purple-400"
+                    >
                         <House size={20} />
                         <span>discover</span>
                     </Link>
 
-                    <Link href="/map" className="flex flex-col items-center gap-1 hover:text-white">
+                    <Link
+                        href="/map"
+                        className="flex flex-col items-center gap-1 hover:text-white"
+                    >
                         <Map size={20} />
                         <span>map</span>
                     </Link>
 
-                    <Link href="/nyu" className="flex flex-col items-center gap-1 hover:text-white">
+                    <Link
+                        href="/nyu"
+                        className="flex flex-col items-center gap-1 hover:text-white"
+                    >
                         <GraduationCap size={20} />
                         <span>NYU</span>
                     </Link>
 
-                    <Link href="/favorites" className="flex flex-col items-center gap-1 hover:text-white">
+                    <Link
+                        href="/favorites"
+                        className="flex flex-col items-center gap-1 hover:text-white"
+                    >
                         <Heart size={20} />
                         <span>favorites</span>
                     </Link>
 
-                    <Link href="/profile" className="flex flex-col items-center gap-1 hover:text-white">
+                    <Link
+                        href="/profile"
+                        className="flex flex-col items-center gap-1 hover:text-white"
+                    >
                         <User size={20} />
                         <span>profile</span>
                     </Link>
