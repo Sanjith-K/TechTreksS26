@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
@@ -20,7 +21,8 @@ import {
 } from "lucide-react";
 
 export default function ProfilePage() {
-    const { user, isSignedIn } = useAuth();
+    const { user, isSignedIn, setUser } = useAuth();
+    const router = useRouter();
 
     const favoriteSpaces = user?.favorites || [];
     const initial =
@@ -221,7 +223,10 @@ export default function ProfilePage() {
                                     <span className="text-white/35">{">"}</span>
                                 </button>
 
-                                <button className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10">
+                                <button
+                                    onClick={() => { setUser(null); router.push("/"); }}
+                                    className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10"
+                                >
                                     <div className="flex items-center gap-3">
                                         <LogOut size={18} />
                                         <span>Log Out</span>

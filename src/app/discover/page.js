@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Stars from "../../components/Stars";
 import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
@@ -102,29 +103,7 @@ export default function DiscoverPage() {
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
                 <header className="flex items-center justify-between">
