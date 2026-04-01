@@ -11,6 +11,11 @@ class SignupRequest(BaseModel):
     password: str
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
 @router.post("/signup")
 def signup(data: SignupRequest):
     try:
@@ -36,3 +41,28 @@ def signup(data: SignupRequest):
         pass
 
     return {"message": "Account created successfully."}
+
+
+@router.post("/login")
+def login(data: LoginRequest):
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": data.email,
+            "password": data.password,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    if not response.user:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    profile = supabase.table("Profiles").select("*").eq("id", response.user.id).execute()
+    name = profile.data[0].get("name") if profile.data else response.user.user_metadata.get("name", "")
+
+    return {
+        "user": {
+            "id": response.user.id,
+            "email": response.user.email,
+            "name": name,
+        }
+    }
