@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import Stars from "../../components/Stars";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -48,7 +49,13 @@ export default function SignUpPage() {
                 body: JSON.stringify({ name, email, password }),
             });
 
-            const data = await res.json();
+            let data;
+            try {
+                data = await res.json();
+            } catch {
+                setError(`Server error (${res.status}). Try again later.`);
+                return;
+            }
 
             if (!res.ok) {
                 setError(data.detail || "Signup failed.");
@@ -76,29 +83,7 @@ export default function SignUpPage() {
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
 
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 py-6">

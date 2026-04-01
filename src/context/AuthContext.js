@@ -1,11 +1,25 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
+    const [user, setUserState] = useState(null);
+
+    useEffect(() => {
+        const stored = localStorage.getItem("be1_user");
+        if (stored) setUserState(JSON.parse(stored));
+    }, []);
+
+    function setUser(u) {
+        setUserState(u);
+        if (u) {
+            localStorage.setItem("be1_user", JSON.stringify(u));
+        } else {
+            localStorage.removeItem("be1_user");
+        }
+    }
 
     const value = useMemo(() => {
         const email = user?.email || "";
