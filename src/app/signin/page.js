@@ -2,8 +2,60 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Stars from "../../components/Stars";
+import { useAuth } from "../../context/AuthContext";
 
 export default function SignInPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const { setUser } = useAuth();
+
+    const redirectTo = searchParams.get("redirect") || "/discover";
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    async function handleSignIn(e) {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+            console.log("Response status:", res.status, "data:", data);
+
+            if (!res.ok) {
+                setError(data.detail || "Sign in failed.");
+                return;
+            }
+
+            console.log("Redirecting to:", redirectTo);
+            if (data.user) {
+                setUser(data.user);
+            } else {
+                setUser({ email });
+            }
+
+            router.push(redirectTo);
+        } catch (err) {
+            console.error("Sign in failed:", err);
+            setError("Could not sign in. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
             {/* Background */}
@@ -12,29 +64,7 @@ export default function SignInPage() {
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
 
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 py-6">
@@ -52,7 +82,7 @@ export default function SignInPage() {
 
                 {/* Back */}
                 <Link
-                    href="/"
+                    href={redirectTo}
                     className="mt-6 flex w-fit items-center gap-2 text-sm text-white/70 hover:text-white"
                 >
                     <ArrowLeft size={16} />
@@ -61,7 +91,10 @@ export default function SignInPage() {
 
                 {/* Centered card */}
                 <div className="flex min-h-[calc(100vh-190px)] items-center justify-center">
-                    <div className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md">
+                    <form
+                        onSubmit={handleSignIn}
+                        className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md"
+                    >
                         <div className="text-center">
                             <h1 className="font-[Be1space] text-4xl tracking-wide">Sign In</h1>
                             <p className="mt-3 text-white/55">
@@ -73,17 +106,33 @@ export default function SignInPage() {
                             <input
                                 type="email"
                                 placeholder="NYU email or personal email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
 
                             <input
                                 type="password"
                                 placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
 
-                            <button className="mt-2 rounded-full bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.35)] hover:bg-blue-700">
-                                Sign In
+                            {error && (
+                                <p className="text-sm text-red-300">
+                                    {error}
+                                </p>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="mt-2 rounded-full bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.35)] hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {loading ? "Signing In..." : "Sign In"}
                             </button>
                         </div>
 
@@ -106,11 +155,14 @@ export default function SignInPage() {
                                 </div>
                             </div>
 
-                            <button className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10">
+                            <button
+                                type="button"
+                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10"
+                            >
                                 Continue with Google
                             </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </main>

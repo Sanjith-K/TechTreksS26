@@ -1,49 +1,74 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import Stars from "../../components/Stars";
 
 export default function SignUpPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const redirectTo = searchParams.get("redirect") || "/discover";
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
-    const [error, setError] = useState(null);
+    const [error, setError] = useState("");
+    const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    async function handleSignup() {
-        setError(null);
+    async function handleSignup(e) {
+        e.preventDefault();
+        setError("");
+        setMessage("");
 
         if (!name || !email || !password || !confirm) {
             setError("Please fill in all fields.");
             return;
         }
+
         if (password !== confirm) {
             setError("Passwords do not match.");
             return;
         }
+
         if (password.length < 6) {
             setError("Password must be at least 6 characters.");
             return;
         }
 
         setLoading(true);
+
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, email, password }),
             });
-            const data = await res.json();
+
+            let data;
+            try {
+                data = await res.json();
+            } catch {
+                setError(`Server error (${res.status}). Try again later.`);
+                return;
+            }
+
             if (!res.ok) {
                 setError(data.detail || "Signup failed.");
                 return;
             }
-            router.push("/signin");
-        } catch {
+
+            setMessage(data.message || "Account created successfully.");
+
+            setTimeout(() => {
+                router.push(`/signin?redirect=${encodeURIComponent(redirectTo)}`);
+            }, 1200);
+        } catch (err) {
+            console.error("Signup failed:", err);
             setError("Could not connect to server.");
         } finally {
             setLoading(false);
@@ -58,40 +83,21 @@ export default function SignUpPage() {
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
 
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 py-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">Be1</h1>
-                        <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">space</span>
+                        <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">
+                            space
+                        </span>
                     </div>
                 </header>
 
                 <Link
-                    href="/signin"
+                    href={`/signin?redirect=${encodeURIComponent(redirectTo)}`}
                     className="mt-6 flex w-fit items-center gap-2 text-sm text-white/70 hover:text-white"
                 >
                     <ArrowLeft size={16} />
@@ -99,7 +105,10 @@ export default function SignUpPage() {
                 </Link>
 
                 <div className="flex min-h-[calc(100vh-190px)] items-center justify-center">
-                    <div className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md">
+                    <form
+                        onSubmit={handleSignup}
+                        className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md"
+                    >
                         <div className="text-center">
                             <h1 className="font-[Be1space] text-4xl tracking-wide">Create Account</h1>
                             <p className="mt-3 text-white/55">
@@ -114,28 +123,34 @@ export default function SignUpPage() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
+
                             <input
                                 type="email"
                                 placeholder="NYU email or personal email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
+
                             <input
                                 type="password"
                                 placeholder="Create password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
+
                             <input
                                 type="password"
                                 placeholder="Confirm password"
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSignup()}
                                 className="w-full rounded-2xl border border-white/8 bg-white/8 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                                required
                             />
 
                             {error && (
@@ -144,10 +159,16 @@ export default function SignUpPage() {
                                 </p>
                             )}
 
+                            {message && (
+                                <p className="rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-300">
+                                    {message}
+                                </p>
+                            )}
+
                             <button
-                                onClick={handleSignup}
+                                type="submit"
                                 disabled={loading}
-                                className="mt-2 rounded-full bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.35)] hover:bg-blue-700 disabled:opacity-50"
+                                className="mt-2 rounded-full bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.35)] hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {loading ? "Creating account..." : "Create Account"}
                             </button>
@@ -156,7 +177,10 @@ export default function SignUpPage() {
                         <div className="mt-6 text-center text-sm text-white/55">
                             <p>
                                 Already have an account?{" "}
-                                <Link href="/signin" className="text-cyan-300 hover:text-cyan-200">
+                                <Link
+                                    href={`/signin?redirect=${encodeURIComponent(redirectTo)}`}
+                                    className="text-cyan-300 hover:text-cyan-200"
+                                >
                                     Sign in
                                 </Link>
                             </p>
@@ -171,11 +195,15 @@ export default function SignUpPage() {
                                     <span className="bg-[#13213a] px-3 text-white/45">or</span>
                                 </div>
                             </div>
-                            <button className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10">
+
+                            <button
+                                type="button"
+                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10"
+                            >
                                 Continue with Google
                             </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </main>

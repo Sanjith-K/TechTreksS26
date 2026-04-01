@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AuthButton from "../../components/AuthButton";
 import {
     House,
     Map as MapIcon,
@@ -49,7 +50,7 @@ export default function MapPage() {
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
 
-                {/* 🔥 LOGO HEADER (NEW) */}
+                {/* LOGO HEADER  */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -59,8 +60,9 @@ export default function MapPage() {
                             space
                         </span>
                     </div>
-                </header>
 
+                    <AuthButton />
+                </header>
                 {/* Back */}
                 <div className="mt-6 flex items-center gap-2 text-sm text-white/70 hover:text-white">
                     <Link href="/discover" className="flex items-center gap-2">
