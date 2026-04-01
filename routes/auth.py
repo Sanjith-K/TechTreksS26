@@ -33,7 +33,6 @@ def signup(data: SignupRequest):
 
     try:
         supabase.table("Profiles").insert({
-            "id": response.user.id,
             "name": data.name,
             "email": data.email,
         }).execute()
@@ -56,7 +55,7 @@ def login(data: LoginRequest):
     if not response.user:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    profile = supabase.table("Profiles").select("*").eq("id", response.user.id).execute()
+    profile = supabase.table("Profiles").select("*").eq("email", response.user.email).execute()
     name = profile.data[0].get("name") if profile.data else response.user.user_metadata.get("name", "")
 
     return {
