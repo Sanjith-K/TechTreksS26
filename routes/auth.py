@@ -33,6 +33,7 @@ def signup(data: SignupRequest):
 
     try:
         supabase.table("Profiles").insert({
+            "id": response.user.id,
             "name": data.name,
             "email": data.email,
         }).execute()
