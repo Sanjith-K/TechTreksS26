@@ -14,15 +14,16 @@ class SignupRequest(BaseModel):
 @router.post("/signup")
 def signup(data: SignupRequest):
     try:
-        response = supabase.auth.sign_up({
+        response = supabase.auth.admin.create_user({
             "email": data.email,
             "password": data.password,
-            "options": {"data": {"name": data.name}},
+            "email_confirm": True,
+            "user_metadata": {"name": data.name},
         })
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    if response.user is None:
+    if not response.user:
         raise HTTPException(status_code=400, detail="Signup failed.")
 
     try:
@@ -34,4 +35,4 @@ def signup(data: SignupRequest):
     except Exception:
         pass
 
-    return {"message": "Account created. Please check your email to confirm."}
+    return {"message": "Account created successfully."}
