@@ -17,7 +17,7 @@ def get_profile(profile_id: str):
         raise HTTPException(status_code=404, detail="Profile not found")
     return response.data[0]
 
-@router.get(f"/{user_id}/favorites")
+@router.get("/{user_id}/favorites")
 def get_favorites(user_id: str):
     response = supabase.table("favorites") \
         .select("*, Spaces(*)") \
