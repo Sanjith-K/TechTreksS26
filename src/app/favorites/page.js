@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
+import { useAuth } from "../../context/AuthContext";
 import {
     House,
     Map,
@@ -11,52 +14,57 @@ import {
     ArrowLeft,
 } from "lucide-react";
 
-const savedSpaces = [
-    {
-        id: 1,
-        name: "Bobst Library",
-        address: "70 Washington Square S",
-        rating: 4.5,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Deep Focus", "All-nighter"],
-    },
-    {
-        id: 2,
-        name: "Think Coffee",
-        address: "248 Mercer St",
-        rating: 4.3,
-        price: "$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Group Study", "Coffee Break"],
-    },
-    {
-        id: 3,
-        name: "Stumptown Coffee",
-        address: "30 W 8th St",
-        rating: 4.4,
-        price: "$$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Morning Study", "Quick Work"],
-    },
-];
-
 export default function FavoritesPage() {
+    const { user, isSignedIn } = useAuth();
+
+    const [savedSpaces, setSavedSpaces] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        async function fetchFavorites() {
+            if (!isSignedIn || !user?.id) {
+                setSavedSpaces([]);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError("");
+
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`
+                );
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.detail || "Could not load favorites.");
+                }
+
+                setSavedSpaces(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error(err);
+                setError("Could not load favorites.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchFavorites();
+    }, [isSignedIn, user]);
+
     return (
         <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
-            {/* Background */}
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
-
             {/* Stars */}
             <div className="pointer-events-none absolute inset-0">
                 {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
+                    const size = Math.random() * 2 + 1; // 1px–3px
                     const left = Math.random() * 100;
                     const top = Math.random() * 100;
                     const delay = Math.random() * 3;
@@ -77,9 +85,7 @@ export default function FavoritesPage() {
                 })}
             </div>
 
-            {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
-                {/* Top header with logo placed like discover */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -89,9 +95,10 @@ export default function FavoritesPage() {
                             space
                         </span>
                     </div>
+
+                    <AuthButton />
                 </header>
 
-                {/* Back */}
                 <div className="mt-6 flex items-center gap-2 text-sm text-white/70 hover:text-white">
                     <Link href="/discover" className="flex items-center gap-2">
                         <ArrowLeft size={16} />
@@ -99,23 +106,45 @@ export default function FavoritesPage() {
                     </Link>
                 </div>
 
-                {/* Title */}
                 <div className="mt-6">
                     <h1 className="text-5xl font-semibold">Favorites</h1>
-                    <p className="mt-2 text-white/55">{savedSpaces.length} saved places</p>
+
+                    {!isSignedIn ? (
+                        <p className="mt-2 text-white/55">Sign in to view your saved places.</p>
+                    ) : loading ? (
+                        <p className="mt-2 text-white/55">Loading your saved places...</p>
+                    ) : (
+                        <p className="mt-2 text-white/55">{savedSpaces.length} saved places</p>
+                    )}
                 </div>
 
-                {/* Cards */}
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                    {savedSpaces.map((space) => (
-                        <Link key={space.id} href="/stores" className="block">
-                            <SpaceCard {...space} />
-                        </Link>
-                    ))}
+                    {!isSignedIn ? (
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                            Please sign in to view your favorites.
+                        </div>
+                    ) : error ? (
+                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-300">
+                            {error}
+                        </div>
+                    ) : loading ? (
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                            Loading...
+                        </div>
+                    ) : savedSpaces.length === 0 ? (
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                            No saved places yet.
+                        </div>
+                    ) : (
+                        savedSpaces.map((space) => (
+                            <Link key={space.id} href={`/stores/${space.id}`} className="block">
+                                <SpaceCard {...space} />
+                            </Link>
+                        ))
+                    )}
                 </div>
             </div>
 
-            {/* Bottom Nav */}
             <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">

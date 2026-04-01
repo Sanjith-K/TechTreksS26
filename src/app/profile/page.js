@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
+import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
 import {
     House,
@@ -17,40 +20,16 @@ import {
     Pencil,
 } from "lucide-react";
 
-const favoriteSpaces = [
-    {
-        id: 1,
-        name: "Bobst Library",
-        address: "70 Washington Square S",
-        rating: 4.5,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Deep Focus", "All-nighter"],
-    },
-    {
-        id: 2,
-        name: "Think Coffee",
-        address: "248 Mercer St",
-        rating: 4.3,
-        price: "$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Group Study", "Coffee Break"],
-    },
-    {
-        id: 3,
-        name: "Stumptown Coffee",
-        address: "30 W 8th St",
-        rating: 4.4,
-        price: "$$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Morning Study", "Quick Work"],
-    },
-];
-
 export default function ProfilePage() {
+    const { user, isSignedIn, setUser } = useAuth();
+    const router = useRouter();
+
+    const favoriteSpaces = user?.favorites || [];
+    const initial =
+        user?.name?.[0]?.toUpperCase() ||
+        user?.email?.[0]?.toUpperCase() ||
+        "U";
+
     return (
         <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
             {/* Background */}
@@ -85,7 +64,7 @@ export default function ProfilePage() {
 
             {/* Content */}
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
-                {/* Top header with logo */}
+                {/* Top header */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -95,6 +74,8 @@ export default function ProfilePage() {
                             space
                         </span>
                     </div>
+
+                    <AuthButton />
                 </header>
 
                 {/* Back */}
@@ -105,152 +86,162 @@ export default function ProfilePage() {
                     </Link>
                 </div>
 
-                {/* Profile header */}
-                <section className="mt-6 overflow-hidden rounded-3xl border border-white/8 bg-white/8 backdrop-blur-md">
-                    <div className="rounded-b-3xl bg-[#0c1b37] px-6 py-8">
-                        <div className="flex flex-col items-center">
-                            <div className="relative">
-                                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-violet-600 text-3xl font-semibold">
-                                    Z
+                {!isSignedIn ? (
+                    <section className="mt-10 rounded-3xl border border-white/8 bg-white/8 p-8 text-center backdrop-blur-md">
+                        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-violet-600 text-3xl font-semibold">
+                            <User size={36} />
+                        </div>
+
+                        <h1 className="mt-6 text-3xl font-semibold">No profile yet</h1>
+                        <p className="mt-3 text-white/55">
+                            Sign in to view your profile, favorites, and personalized study spaces.
+                        </p>
+
+                        <Link
+                            href="/signin?redirect=/profile"
+                            className="mt-6 inline-block rounded-full bg-fuchsia-600 px-6 py-3 text-sm font-medium text-white hover:bg-fuchsia-500"
+                        >
+                            Sign in to continue
+                        </Link>
+                    </section>
+                ) : (
+                    <>
+                        {/* Profile header */}
+                        <section className="mt-6 overflow-hidden rounded-3xl border border-white/8 bg-white/8 backdrop-blur-md">
+                            <div className="rounded-b-3xl bg-[#0c1b37] px-6 py-8">
+                                <div className="flex flex-col items-center">
+                                    <div className="relative">
+                                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 to-violet-600 text-3xl font-semibold">
+                                            {initial}
+                                        </div>
+
+                                        <button className="absolute bottom-0 right-0 rounded-full bg-fuchsia-600 p-2 text-white shadow-md hover:bg-fuchsia-500">
+                                            <Pencil size={14} />
+                                        </button>
+                                    </div>
+
+                                    <h1 className="mt-4 text-3xl font-semibold">
+                                        {user?.name || "User"}
+                                    </h1>
+                                    <p className="mt-1 text-white/55">
+                                        {user?.email || "No email available"}
+                                    </p>
+
+                                    <div className="mt-6 flex gap-10 text-center">
+                                        <div>
+                                            <p className="text-2xl font-semibold">0</p>
+                                            <p className="text-sm text-white/45">Followers</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-semibold">0</p>
+                                            <p className="text-sm text-white/45">Following</p>
+                                        </div>
+                                    </div>
+
+                                    <button className="mt-6 rounded-full bg-fuchsia-600 px-6 py-2 text-sm font-medium text-white hover:bg-fuchsia-500">
+                                        Edit Profile
+                                    </button>
                                 </div>
 
-                                <button className="absolute bottom-0 right-0 rounded-full bg-fuchsia-600 p-2 text-white shadow-md hover:bg-fuchsia-500">
-                                    <Pencil size={14} />
+                                <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    <div className="rounded-2xl bg-white/5 p-4 text-center">
+                                        <p className="text-2xl font-semibold">{favoriteSpaces.length}</p>
+                                        <p className="mt-1 text-sm text-white/45">Favorites</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/5 p-4 text-center">
+                                        <p className="text-2xl font-semibold">0</p>
+                                        <p className="mt-1 text-sm text-white/45">Visited</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/5 p-4 text-center">
+                                        <p className="text-2xl font-semibold">0</p>
+                                        <p className="mt-1 text-sm text-white/45">Reviews</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Favorites / Recent */}
+                        <section className="mt-8">
+                            <div className="mb-5 flex gap-3">
+                                <button className="rounded-full bg-fuchsia-600 px-4 py-2 text-sm text-white">
+                                    Favorites
+                                </button>
+                                <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/70">
+                                    Recent
                                 </button>
                             </div>
 
-                            <h1 className="mt-4 text-3xl font-semibold">NYU Student</h1>
-                            <p className="mt-1 text-white/55">New York University</p>
-
-                            <div className="mt-6 flex gap-10 text-center">
-                                <div>
-                                    <p className="text-2xl font-semibold">234</p>
-                                    <p className="text-sm text-white/45">Followers</p>
+                            {favoriteSpaces.length === 0 ? (
+                                <div className="rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60 backdrop-blur-md">
+                                    No favorites saved yet.
                                 </div>
-                                <div>
-                                    <p className="text-2xl font-semibold">189</p>
-                                    <p className="text-sm text-white/45">Following</p>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                                    {favoriteSpaces.map((space) => (
+                                        <Link key={space.id} href={`/stores/${space.id}`} className="block">
+                                            <SpaceCard {...space} />
+                                        </Link>
+                                    ))}
                                 </div>
-                            </div>
+                            )}
+                        </section>
 
-                            <button className="mt-6 rounded-full bg-fuchsia-600 px-6 py-2 text-sm font-medium text-white hover:bg-fuchsia-500">
-                                Follow
-                            </button>
+                        {/* Settings */}
+                        <section className="mt-8">
+                            <h2 className="mb-4 text-2xl font-semibold">Settings</h2>
+
+                            <div className="space-y-3">
+                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <Bell size={18} className="text-white/70" />
+                                        <span>Notifications</span>
+                                    </div>
+                                    <span className="text-white/35">{">"}</span>
+                                </button>
+
+                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <Shield size={18} className="text-white/70" />
+                                        <span>Privacy & Security</span>
+                                    </div>
+                                    <span className="text-white/35">{">"}</span>
+                                </button>
+
+                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <SlidersHorizontal size={18} className="text-white/70" />
+                                        <span>Preferences</span>
+                                    </div>
+                                    <span className="text-white/35">{">"}</span>
+                                </button>
+
+                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
+                                    <div className="flex items-center gap-3">
+                                        <CircleHelp size={18} className="text-white/70" />
+                                        <span>Help & Support</span>
+                                    </div>
+                                    <span className="text-white/35">{">"}</span>
+                                </button>
+
+                                <button
+                                    onClick={() => { setUser(null); router.push("/"); }}
+                                    className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <LogOut size={18} />
+                                        <span>Log Out</span>
+                                    </div>
+                                    <span className="text-red-300/60">{">"}</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <div className="mt-10 text-center text-sm text-white/35">
+                            <p>Be in1 v1.0.0</p>
+                            <p className="mt-1">Made for NYU Students 💜</p>
                         </div>
-
-                        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div className="rounded-2xl bg-white/5 p-4 text-center">
-                                <p className="text-2xl font-semibold">3</p>
-                                <p className="mt-1 text-sm text-white/45">Favorites</p>
-                            </div>
-                            <div className="rounded-2xl bg-white/5 p-4 text-center">
-                                <p className="text-2xl font-semibold">3</p>
-                                <p className="mt-1 text-sm text-white/45">Visited</p>
-                            </div>
-                            <div className="rounded-2xl bg-white/5 p-4 text-center">
-                                <p className="text-2xl font-semibold">12</p>
-                                <p className="mt-1 text-sm text-white/45">Reviews</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Study stats */}
-                <section className="mt-8">
-                    <h2 className="mb-4 text-2xl font-semibold">Study Stats</h2>
-
-                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
-                            <p className="text-3xl font-semibold">47</p>
-                            <p className="mt-1 text-sm text-white/45">Study Sessions</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
-                            <p className="text-3xl font-semibold">124</p>
-                            <p className="mt-1 text-sm text-white/45">Hours Logged</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
-                            <p className="text-3xl font-semibold">23</p>
-                            <p className="mt-1 text-sm text-white/45">Places Visited</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
-                            <p className="text-3xl font-semibold">12</p>
-                            <p className="mt-1 text-sm text-white/45">Reviews</p>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Favorites / Recent */}
-                <section className="mt-8">
-                    <div className="mb-5 flex gap-3">
-                        <button className="rounded-full bg-fuchsia-600 px-4 py-2 text-sm text-white">
-                            Favorites
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/70">
-                            Recent
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                        {favoriteSpaces.map((space) => (
-                            <Link key={space.id} href="/stores" className="block">
-                                <SpaceCard {...space} />
-                            </Link>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Settings */}
-                <section className="mt-8">
-                    <h2 className="mb-4 text-2xl font-semibold">Settings</h2>
-
-                    <div className="space-y-3">
-                        <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                            <div className="flex items-center gap-3">
-                                <Bell size={18} className="text-white/70" />
-                                <span>Notifications</span>
-                            </div>
-                            <span className="text-white/35">{">"}</span>
-                        </button>
-
-                        <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                            <div className="flex items-center gap-3">
-                                <Shield size={18} className="text-white/70" />
-                                <span>Privacy & Security</span>
-                            </div>
-                            <span className="text-white/35">{">"}</span>
-                        </button>
-
-                        <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                            <div className="flex items-center gap-3">
-                                <SlidersHorizontal size={18} className="text-white/70" />
-                                <span>Preferences</span>
-                            </div>
-                            <span className="text-white/35">{">"}</span>
-                        </button>
-
-                        <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                            <div className="flex items-center gap-3">
-                                <CircleHelp size={18} className="text-white/70" />
-                                <span>Help & Support</span>
-                            </div>
-                            <span className="text-white/35">{">"}</span>
-                        </button>
-
-                        <button className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10">
-                            <div className="flex items-center gap-3">
-                                <LogOut size={18} />
-                                <span>Log Out</span>
-                            </div>
-                            <span className="text-red-300/60">{">"}</span>
-                        </button>
-                    </div>
-                </section>
-
-                {/* Footer text */}
-                <div className="mt-10 text-center text-sm text-white/35">
-                    <p>Be in1 v1.0.0</p>
-                    <p className="mt-1">Made for NYU Students 💜</p>
-                </div>
+                    </>
+                )}
             </div>
 
             {/* Bottom Nav */}

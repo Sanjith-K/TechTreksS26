@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Stars from "../../components/Stars";
+import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
 import {
@@ -12,137 +14,98 @@ import {
     SlidersHorizontal,
 } from "lucide-react";
 
-const featuredSpaces = [
-    {
-        id: 1,
-        name: "Bobst Library",
-        address: "70 Washington Square S",
-        rating: 4.5,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Deep Focus", "All-nighter"],
-    },
-    {
-        id: 2,
-        name: "Think Coffee",
-        address: "248 Mercer St",
-        rating: 4.3,
-        price: "$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Group Study", "Coffee Break"],
-    },
-];
+const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
 
-const popularSpaces = [
-    {
-        id: 3,
-        name: "Stumptown Coffee",
-        address: "30 W 8th St",
-        rating: 4.4,
-        price: "$$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Morning Study", "Quick Work"],
-    },
-    {
-        id: 4,
-        name: "Kimmel Student Center",
-        address: "60 Washington Sq S",
-        rating: 4.2,
-        price: "$",
-        vibe: "Lively",
-        distance: "0.1 mi",
-        tags: ["Student Space", "Quick Meetup"],
-    },
-];
+function mapSpace(s) {
+    let tags = [];
+    if (typeof s.tags === "string" && s.tags) {
+        try { tags = JSON.parse(s.tags); } catch { tags = s.tags.split(",").map((t) => t.trim()); }
+    } else if (Array.isArray(s.tags)) {
+        tags = s.tags;
+    }
+    return {
+        id: s.google_place_id,
+        name: s.name,
+        address: s.address || "",
+        rating: "—",
+        price: PRICE_MAP[s.price_range] || "$",
+        vibe: s.vibe || s.noise_level || "—",
+        distance: "—",
+        tags,
+        nyu_discount: s.nyu_discount,
+    };
+}
 
-const nyuSpaces = [
-    {
-        id: 5,
-        name: "NYU Torch Club",
-        address: "18 Waverly Pl",
-        rating: 4.0,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Campus Spot", "Reading"],
-    },
-    {
-        id: 6,
-        name: "Kimmel Student Center",
-        address: "60 Washington Sq S",
-        rating: 4.2,
-        price: "$",
-        vibe: "Lively",
-        distance: "0.1 mi",
-        tags: ["Student Space", "Quick Meetup"],
-    },
-];
-
-function Section({ title, spaces }) {
+function Section({ title, spaces, loading, hide }) {
+    if (hide) return null;
+    if (loading) {
+        return (
+            <section className="mt-8">
+                <h2 className="mb-4 text-3xl font-semibold text-white">{title}</h2>
+                <p className="text-white/50">Loading...</p>
+            </section>
+        );
+    }
     return (
         <section className="mt-8">
             <h2 className="mb-4 text-3xl font-semibold text-white">{title}</h2>
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                {spaces.map((space) => (
-                    <Link key={space.id} href="/stores" className="block">
-                        <SpaceCard
-                            name={space.name}
-                            address={space.address}
-                            rating={space.rating}
-                            price={space.price}
-                            vibe={space.vibe}
-                            distance={space.distance}
-                            tags={space.tags}
-                        />
-                    </Link>
-                ))}
-            </div>
+            {spaces.length === 0 ? (
+                <p className="text-white/40">No spaces found.</p>
+            ) : (
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                    {spaces.map((space) => (
+                        <Link key={space.id} href={`/stores/${space.id}`} className="block">
+                            <SpaceCard
+                                name={space.name}
+                                address={space.address}
+                                rating={space.rating}
+                                price={space.price}
+                                vibe={space.vibe}
+                                distance={space.distance}
+                                tags={space.tags}
+                            />
+                        </Link>
+                    ))}
+                </div>
+            )}
         </section>
     );
 }
 
 export default function DiscoverPage() {
     const [showFilters, setShowFilters] = useState(false);
+    const [allSpaces, setAllSpaces] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/`)
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then((data) => {
+                setAllSpaces(Array.isArray(data) ? data.map(mapSpace) : []);
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error("Failed to fetch spaces:", err);
+                setLoading(false);
+            });
+    }, []);
     const [priceValue, setPriceValue] = useState(50);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
+        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
             {/* Background */}
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
             {/* Content */}
-            <div className="relative z-10 mx-auto max-w-7xl px-8 pb-28 pt-6">
-                {/* Header */}
+            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -154,9 +117,7 @@ export default function DiscoverPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold">
-                            Z
-                        </div>
+                        <AuthButton />
 
                         <button
                             onClick={() => setShowFilters(!showFilters)}
@@ -411,9 +372,9 @@ export default function DiscoverPage() {
 
                     {/* Sections */}
                     <div className="min-w-0 flex-1">
-                        <Section title="Featured Spots" spaces={featuredSpaces} />
-                        <Section title="Popular This Week" spaces={popularSpaces} />
-                        <Section title="NYU Spaces" spaces={nyuSpaces} />
+                        <Section title="Featured Spots" spaces={allSpaces} loading={loading} />
+                        <Section title="Popular This Week" spaces={[]} loading={false} hide />
+                        <Section title="NYU Spaces" spaces={allSpaces.filter((s) => s.nyu_discount)} loading={loading} />
                     </div>
                 </div>
             </div>
