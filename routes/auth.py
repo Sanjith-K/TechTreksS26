@@ -26,6 +26,7 @@ def signup(data: SignupRequest):
             "user_metadata": {"name": data.name},
         })
     except Exception as e:
+        print(f"Signup error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
     if not response.user:
