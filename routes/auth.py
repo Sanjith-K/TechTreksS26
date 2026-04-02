@@ -19,11 +19,10 @@ class LoginRequest(BaseModel):
 @router.post("/signup")
 def signup(data: SignupRequest):
     try:
-        response = supabase.auth.admin.create_user({
+        response = supabase.auth.sign_up({
             "email": data.email,
             "password": data.password,
-            "email_confirm": True,
-            "user_metadata": {"name": data.name},
+            "options": {"data": {"name": data.name}},
         })
     except Exception as e:
         print(f"Signup error: {e}")
