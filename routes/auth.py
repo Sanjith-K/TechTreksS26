@@ -27,7 +27,9 @@ def signup(data: SignupRequest):
         print(f"Signup response: user={response.user}, session={response.session}")
 
     except Exception as e:
+        import traceback
         print(f"Signup error type: {type(e).__name__}, detail: {e}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
 
     if not response.user:
