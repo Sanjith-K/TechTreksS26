@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getFavorites, addFavorite, removeFavorite } from "@/lib/favorites";
+import Stars from "../../components/Stars";
+import { getSpaces } from "@/lib/spaces";
+import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
 import {
@@ -12,137 +16,212 @@ import {
     SlidersHorizontal,
 } from "lucide-react";
 
-const featuredSpaces = [
-    {
-        id: 1,
-        name: "Bobst Library",
-        address: "70 Washington Square S",
-        rating: 4.5,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Deep Focus", "All-nighter"],
-    },
-    {
-        id: 2,
-        name: "Think Coffee",
-        address: "248 Mercer St",
-        rating: 4.3,
-        price: "$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Group Study", "Coffee Break"],
-    },
-];
+const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
 
-const popularSpaces = [
-    {
-        id: 3,
-        name: "Stumptown Coffee",
-        address: "30 W 8th St",
-        rating: 4.4,
-        price: "$$$",
-        vibe: "Moderate",
-        distance: "0.3 mi",
-        tags: ["Morning Study", "Quick Work"],
-    },
-    {
-        id: 4,
-        name: "Kimmel Student Center",
-        address: "60 Washington Sq S",
-        rating: 4.2,
-        price: "$",
-        vibe: "Lively",
-        distance: "0.1 mi",
-        tags: ["Student Space", "Quick Meetup"],
-    },
-];
+function mapSpace(s) {
+    let tags = [];
+    if (typeof s.tags === "string" && s.tags) {
+        try {
+            tags = JSON.parse(s.tags);
+        } catch {
+            tags = s.tags.split(",").map((t) => t.trim());
+        }
+    } else if (Array.isArray(s.tags)) {
+        tags = s.tags;
+    }
 
-const nyuSpaces = [
-    {
-        id: 5,
-        name: "NYU Torch Club",
-        address: "18 Waverly Pl",
-        rating: 4.0,
-        price: "$",
-        vibe: "Quiet",
-        distance: "0.2 mi",
-        tags: ["Campus Spot", "Reading"],
-    },
-    {
-        id: 6,
-        name: "Kimmel Student Center",
-        address: "60 Washington Sq S",
-        rating: 4.2,
-        price: "$",
-        vibe: "Lively",
-        distance: "0.1 mi",
-        tags: ["Student Space", "Quick Meetup"],
-    },
-];
+    return {
+        id: s.google_place_id,
+        name: s.name,
+        address: s.address || "",
+        rating: "—",
+        price: PRICE_MAP[s.price_range] || "$",
+        vibe: s.vibe || s.noise_level || "—",
+        distance: "—",
+        tags,
+        nyu_discount: s.nyu_discount,
+    };
+}
 
-function Section({ title, spaces }) {
+function Section({
+    title,
+    spaces,
+    loading,
+    hide,
+    favoriteIds = [],
+    onToggleFavorite,
+}) {
+    if (hide) return null;
+
+    if (loading) {
+        return (
+            <section className="mt-8">
+                <h2 className="mb-4 text-3xl font-semibold text-white">{title}</h2>
+                <p className="text-white/50">Loading...</p>
+            </section>
+        );
+    }
+
     return (
         <section className="mt-8">
             <h2 className="mb-4 text-3xl font-semibold text-white">{title}</h2>
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                {spaces.map((space) => (
-                    <Link key={space.id} href="/stores" className="block">
-                        <SpaceCard
-                            name={space.name}
-                            address={space.address}
-                            rating={space.rating}
-                            price={space.price}
-                            vibe={space.vibe}
-                            distance={space.distance}
-                            tags={space.tags}
-                        />
-                    </Link>
-                ))}
-            </div>
+            {spaces.length === 0 ? (
+                <p className="text-white/40">No spaces found.</p>
+            ) : (
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                    {spaces.map((space) => (
+                        <Link key={space.id} href={`/stores/${space.id}`} className="block">
+                            <SpaceCard
+                                name={space.name}
+                                address={space.address}
+                                rating={space.rating}
+                                price={space.price}
+                                vibe={space.vibe}
+                                distance={space.distance}
+                                tags={space.tags}
+                                isFavorited={favoriteIds.includes(space.id)}
+                                onToggleFavorite={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onToggleFavorite?.(space.id);
+                                }}
+                            />
+                        </Link>
+                    ))}
+                </div>
+            )}
         </section>
     );
 }
 
 export default function DiscoverPage() {
     const [showFilters, setShowFilters] = useState(false);
-    const [priceValue, setPriceValue] = useState(50);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
+    const [allSpaces, setAllSpaces] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [priceValue, setPriceValue] = useState(50);
+    const [favoriteIds, setFavoriteIds] = useState([]);
+
+    const [filters, setFilters] = useState({
+        wifi: false,
+        noise_level: "",
+        laptop_friendly: false,
+        nyu_discount: false,
+    });
+
+    async function loadSpaces(activeFilters = {}) {
+        try {
+            setLoading(true);
+
+            const backendFilters = {};
+
+            if (activeFilters.wifi) backendFilters.wifi = true;
+            if (activeFilters.noise_level) backendFilters.noise_level = activeFilters.noise_level;
+            if (activeFilters.laptop_friendly) backendFilters.laptop_friendly = true;
+            if (activeFilters.nyu_discount) backendFilters.nyu_discount = true;
+
+            const data = await getSpaces(backendFilters);
+            setAllSpaces(Array.isArray(data) ? data.map(mapSpace) : []);
+        } catch (err) {
+            console.error("Failed to fetch spaces:", err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function toggleFavorite(spaceId) {
+        try {
+            const user =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
+
+            if (!user?.id) {
+                alert("Please sign in first.");
+                return;
+            }
+
+            if (favoriteIds.includes(spaceId)) {
+                await removeFavorite(user.id, spaceId);
+                setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
+            } else {
+                await addFavorite(user.id, spaceId);
+                setFavoriteIds((prev) => [...prev, spaceId]);
+            }
+        } catch (err) {
+            console.error("Favorite toggle failed:", err);
+        }
+    }
+
+    useEffect(() => {
+        async function init() {
+            await loadSpaces();
+
+            const user =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
+
+            if (user?.id) {
+                try {
+                    const favorites = await getFavorites(user.id);
+                    const ids = Array.isArray(favorites)
+                        ? favorites.map((f) => f.space_id)
+                        : [];
+                    setFavoriteIds(ids);
+                } catch (err) {
+                    console.error("Failed to load favorites:", err);
+                }
+            }
+        }
+
+        init();
+    }, []);
+
+    function toggleBooleanFilter(key) {
+        setFilters((prev) => ({
+            ...prev,
+            [key]: !prev[key],
+        }));
+    }
+
+    function setNoiseFilter(value) {
+        setFilters((prev) => ({
+            ...prev,
+            noise_level: prev.noise_level === value ? "" : value,
+        }));
+    }
+
+    function clearFilters() {
+        const cleared = {
+            wifi: false,
+            noise_level: "",
+            laptop_friendly: false,
+            nyu_discount: false,
+        };
+
+        setFilters(cleared);
+        loadSpaces(cleared);
+        setShowExtraPanel(false);
+        setShowFilters(false);
+    }
+
+    function applyFilters() {
+        loadSpaces(filters);
+        setShowExtraPanel(false);
+        setShowFilters(false);
+    }
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
-            {/* Background */}
-            <div className="pointer-events-none absolute inset-0">
+        <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
+            <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
+            <Stars />
 
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
-            {/* Content */}
-            <div className="relative z-10 mx-auto max-w-7xl px-8 pb-28 pt-6">
-                {/* Header */}
+            <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-36 pt-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -154,9 +233,7 @@ export default function DiscoverPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold">
-                            Z
-                        </div>
+                        <AuthButton />
 
                         <button
                             onClick={() => setShowFilters(!showFilters)}
@@ -168,7 +245,6 @@ export default function DiscoverPage() {
                     </div>
                 </header>
 
-                {/* Search */}
                 <div className="mt-6">
                     <input
                         type="text"
@@ -179,7 +255,10 @@ export default function DiscoverPage() {
                     <p className="mt-3 text-white/60">Near NYU Washington Square</p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <button className="rounded-full bg-blue-600 px-4 py-2 text-sm text-white">
+                        <button
+                            onClick={clearFilters}
+                            className="rounded-full bg-blue-600 px-4 py-2 text-sm text-white"
+                        >
                             All
                         </button>
                         <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
@@ -197,24 +276,54 @@ export default function DiscoverPage() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+                        <button
+                            onClick={() => toggleBooleanFilter("wifi")}
+                            className={`rounded-full border px-4 py-2 text-sm ${filters.wifi
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                        >
                             WiFi
                         </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+
+                        <button
+                            onClick={() => setNoiseFilter("quiet")}
+                            className={`rounded-full border px-4 py-2 text-sm ${filters.noise_level === "quiet"
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                        >
                             Quiet
                         </button>
+
                         <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
                             Budget
                         </button>
+
                         <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
                             Open Now
                         </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+
+                        <button
+                            onClick={() => toggleBooleanFilter("nyu_discount")}
+                            className={`rounded-full border px-4 py-2 text-sm ${filters.nyu_discount
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                        >
                             NYU Discount
                         </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+
+                        <button
+                            onClick={() => toggleBooleanFilter("laptop_friendly")}
+                            className={`rounded-full border px-4 py-2 text-sm ${filters.laptop_friendly
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                        >
                             Laptop OK
                         </button>
+
                         <button
                             onClick={() => setShowExtraPanel(true)}
                             className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80 hover:bg-white/12"
@@ -223,10 +332,9 @@ export default function DiscoverPage() {
                         </button>
                     </div>
 
-                    {/* Extra pop-up filter panel */}
                     {showExtraPanel && (
                         <div className="mt-4 flex justify-center">
-                            <div className="w-full max-w-3xl rounded-2xl border border-white/8 bg-[#0f1b33]/85 p-6 backdrop-blur-xl shadow-[0_0_40px_rgba(59,130,246,0.18)]">
+                            <div className="w-full max-w-3xl rounded-2xl border border-white/8 bg-[#0f1b33]/85 p-6 shadow-[0_0_40px_rgba(59,130,246,0.18)] backdrop-blur-xl">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-white">Filters</h3>
                                     <button
@@ -240,12 +348,16 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Noise Level</h4>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {["Quiet", "Moderate", "Lively"].map((item) => (
+                                        {["quiet", "moderate", "lively"].map((item) => (
                                             <button
                                                 key={item}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                                onClick={() => setNoiseFilter(item)}
+                                                className={`rounded-full border px-4 py-1.5 text-sm ${filters.noise_level === item
+                                                        ? "border-blue-400 bg-blue-600 text-white"
+                                                        : "border-white/10 bg-white/8 text-white/80"
+                                                    }`}
                                             >
-                                                {item}
+                                                {item.charAt(0).toUpperCase() + item.slice(1)}
                                             </button>
                                         ))}
                                     </div>
@@ -254,14 +366,43 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Features</h4>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {["WiFi", "Outlets", "Laptop", "Bathroom", "NYU Discount"].map((item) => (
-                                            <button
-                                                key={item}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
-                                            >
-                                                {item}
-                                            </button>
-                                        ))}
+                                        <button
+                                            onClick={() => toggleBooleanFilter("wifi")}
+                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.wifi
+                                                    ? "border-blue-400 bg-blue-600 text-white"
+                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                }`}
+                                        >
+                                            WiFi
+                                        </button>
+
+                                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80">
+                                            Outlets
+                                        </button>
+
+                                        <button
+                                            onClick={() => toggleBooleanFilter("laptop_friendly")}
+                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.laptop_friendly
+                                                    ? "border-blue-400 bg-blue-600 text-white"
+                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                }`}
+                                        >
+                                            Laptop
+                                        </button>
+
+                                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80">
+                                            Bathroom
+                                        </button>
+
+                                        <button
+                                            onClick={() => toggleBooleanFilter("nyu_discount")}
+                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.nyu_discount
+                                                    ? "border-blue-400 bg-blue-600 text-white"
+                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                }`}
+                                        >
+                                            NYU Discount
+                                        </button>
                                     </div>
                                 </div>
 
@@ -280,10 +421,16 @@ export default function DiscoverPage() {
                                 </div>
 
                                 <div className="mt-6 flex gap-3">
-                                    <button className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5">
+                                    <button
+                                        onClick={clearFilters}
+                                        className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5"
+                                    >
                                         Clear
                                     </button>
-                                    <button className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90">
+                                    <button
+                                        onClick={applyFilters}
+                                        className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                                    >
                                         Apply
                                     </button>
                                 </div>
@@ -292,13 +439,11 @@ export default function DiscoverPage() {
                     )}
                 </div>
 
-                {/* Main layout */}
                 <div className="mt-8 flex gap-6">
-                    {/* Sidebar */}
                     <aside
                         className={`shrink-0 overflow-hidden rounded-2xl border border-white/8 bg-white/8 backdrop-blur-md transition-all duration-300 ${showFilters
-                            ? "w-[280px] p-5 opacity-100"
-                            : "w-0 border-transparent p-0 opacity-0"
+                                ? "w-[280px] p-5 opacity-100"
+                                : "w-0 border-transparent p-0 opacity-0"
                             }`}
                     >
                         {showFilters && (
@@ -340,15 +485,29 @@ export default function DiscoverPage() {
                                     <h3 className="text-lg font-medium text-white/85">Vibe</h3>
                                     <div className="mt-3 space-y-3 text-white/80">
                                         <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.noise_level === "quiet"}
+                                                onChange={() => setNoiseFilter("quiet")}
+                                            />
                                             Quiet
                                         </label>
+
                                         <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.noise_level === "moderate"}
+                                                onChange={() => setNoiseFilter("moderate")}
+                                            />
                                             Moderate
                                         </label>
+
                                         <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.noise_level === "lively"}
+                                                onChange={() => setNoiseFilter("lively")}
+                                            />
                                             Lively
                                         </label>
                                     </div>
@@ -358,24 +517,45 @@ export default function DiscoverPage() {
                                     <h3 className="text-lg font-medium text-white/85">Amenities</h3>
                                     <div className="mt-3 space-y-3 text-white/80">
                                         <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.wifi}
+                                                onChange={() => toggleBooleanFilter("wifi")}
+                                            />
                                             WiFi
                                         </label>
+
                                         <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.laptop_friendly}
+                                                onChange={() => toggleBooleanFilter("laptop_friendly")}
+                                            />
                                             Laptop OK
                                         </label>
+
                                         <label className="flex items-center gap-3">
                                             <input type="checkbox" />
                                             Power Outlets
                                         </label>
+
                                         <label className="flex items-center gap-3">
                                             <input type="checkbox" />
                                             Food & Drinks
                                         </label>
+
                                         <label className="flex items-center gap-3">
                                             <input type="checkbox" />
                                             Open Late
+                                        </label>
+
+                                        <label className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.nyu_discount}
+                                                onChange={() => toggleBooleanFilter("nyu_discount")}
+                                            />
+                                            NYU Discount
                                         </label>
                                     </div>
                                 </div>
@@ -402,24 +582,45 @@ export default function DiscoverPage() {
                                     </div>
                                 </div>
 
-                                <button className="mt-8 w-full rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700">
-                                    Apply Filters
-                                </button>
+                                <div className="mt-8 flex gap-2">
+                                    <button
+                                        onClick={clearFilters}
+                                        className="w-1/2 rounded-full border border-white/10 px-4 py-3 font-medium text-white/70 hover:bg-white/5"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        onClick={applyFilters}
+                                        className="w-1/2 rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700"
+                                    >
+                                        Apply Filters
+                                    </button>
+                                </div>
                             </>
                         )}
                     </aside>
 
-                    {/* Sections */}
                     <div className="min-w-0 flex-1">
-                        <Section title="Featured Spots" spaces={featuredSpaces} />
-                        <Section title="Popular This Week" spaces={popularSpaces} />
-                        <Section title="NYU Spaces" spaces={nyuSpaces} />
+                        <Section
+                            title="Featured Spots"
+                            spaces={allSpaces}
+                            loading={loading}
+                            favoriteIds={favoriteIds}
+                            onToggleFavorite={toggleFavorite}
+                        />
+                        <Section title="Popular This Week" spaces={[]} loading={false} hide />
+                        <Section
+                            title="NYU Spaces"
+                            spaces={allSpaces.filter((s) => s.nyu_discount)}
+                            loading={loading}
+                            favoriteIds={favoriteIds}
+                            onToggleFavorite={toggleFavorite}
+                        />
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Nav */}
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 text-purple-400">
                         <House size={20} />
