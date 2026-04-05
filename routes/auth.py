@@ -25,6 +25,7 @@ def signup(data: SignupRequest):
             "options": {"data": {"name": data.name}},
         })
         print(f"Signup response: user={response.user}, session={response.session}")
+
     except Exception as e:
         print(f"Signup error type: {type(e).__name__}, detail: {e}")
         raise HTTPException(status_code=400, detail=str(e))
