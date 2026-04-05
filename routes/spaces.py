@@ -31,3 +31,13 @@ def get_space(space_id: str):
     if not response.data:
         raise HTTPException(status_code=404, detail="Space not found")
     return response.data[0]
+
+
+@router.get("/map")
+def get_spaces_for_map():
+    response = supabase.table("Spaces") \
+        .select("google_place_id, name, address, latitude, longitude, noise_level, vibe, price_range, tags") \
+        .not_.is_("latitude", "null") \
+        .not_.is_("longitude", "null") \
+        .execute()
+    return response.data
