@@ -11,6 +11,7 @@ def get_spaces(
     wifi: Optional[bool] = Query(default=None),
     noise_level: Optional[str] = Query(default=None),
     laptop_friendly: Optional[bool] = Query(default=None),
+    price_range: Optional[int] = Query(default=None),
 ):
     query = supabase.table("Spaces").select("*")
     if nyu_discount is not None:
@@ -18,10 +19,22 @@ def get_spaces(
     if wifi is not None:
         query = query.eq("wifi", wifi)
     if noise_level:
-        query = query.eq("noise_level", noise_level)
+        query = query.eq("noise_level", noise_level.lower())
     if laptop_friendly is not None:
         query = query.eq("laptop_friendly", laptop_friendly)
+    if price_range is not None:
+        query = query.eq("price_range", price_range)
     response = query.execute()
+    return response.data
+
+
+@router.get("/map")
+def get_spaces_for_map():
+    response = supabase.table("Spaces") \
+        .select("google_place_id, name, address, latitude, longitude, noise_level, vibe, price_range, tags") \
+        .not_.is_("latitude", "null") \
+        .not_.is_("longitude", "null") \
+        .execute()
     return response.data
 
 
