@@ -5,13 +5,11 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Stars from "../../components/Stars";
-import { useAuth } from "../../context/AuthContext";
 import { login } from "@/lib/auth";
 
 export default function SignInPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { setUser } = useAuth();
 
     const redirectTo = searchParams.get("redirect") || "/discover";
 
@@ -29,11 +27,9 @@ export default function SignInPage() {
             const data = await login({ email, password });
 
             if (data.user) {
-                setUser(data.user);
                 localStorage.setItem("user", JSON.stringify(data.user));
             } else {
                 const fallbackUser = { email };
-                setUser(fallbackUser);
                 localStorage.setItem("user", JSON.stringify(fallbackUser));
             }
 

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getFavorites, addFavorite, removeFavorite } from "@/lib/favorites";
 import Stars from "../../components/Stars";
 import { getSpaces } from "@/lib/spaces";
-import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
 import {
@@ -14,9 +13,115 @@ import {
     Heart,
     User,
     SlidersHorizontal,
+    ArrowUpDown,
 } from "lucide-react";
 
 const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
+const CATEGORY_OPTIONS = [
+    { label: "All", value: "all" },
+    { label: "Cafes", value: "cafe" },
+    { label: "Libraries", value: "library" },
+    { label: "Coworking", value: "coworking" },
+    { label: "Lounges", value: "lounge" },
+];
+
+function normalizeText(value) {
+    return String(value || "").toLowerCase().trim();
+}
+
+function inferCategory(space) {
+    const haystack = [
+        space.name,
+        space.address,
+        ...(Array.isArray(space.tags) ? space.tags : []),
+        space.raw?.place_type,
+        space.raw?.category,
+        space.raw?.types,
+    ]
+        .flat()
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    if (
+        haystack.includes("library") ||
+        haystack.includes("bobst")
+    ) {
+        return "library";
+    }
+
+    if (
+        haystack.includes("cowork") ||
+        haystack.includes("workspace")
+    ) {
+        return "coworking";
+    }
+
+    if (
+        haystack.includes("lounge") ||
+        haystack.includes("common room")
+    ) {
+        return "lounge";
+    }
+
+    return "cafe";
+}
+
+function getPriceLevel(space) {
+    if (typeof space.raw?.price_range === "number") {
+        return space.raw.price_range;
+    }
+
+    return Object.entries(PRICE_MAP).find(([, label]) => label === space.price)?.[0]
+        ? Number(Object.entries(PRICE_MAP).find(([, label]) => label === space.price)?.[0])
+        : 1;
+}
+
+function getNumericRating(space) {
+    const rawRating = Number(space.raw?.rating ?? space.rating);
+    return Number.isFinite(rawRating) ? rawRating : 0;
+}
+
+function compareSpaces(a, b, sortBy) {
+    switch (sortBy) {
+        case "name":
+            return a.name.localeCompare(b.name);
+        case "price-low":
+            return getPriceLevel(a) - getPriceLevel(b) || a.name.localeCompare(b.name);
+        case "price-high":
+            return getPriceLevel(b) - getPriceLevel(a) || a.name.localeCompare(b.name);
+        case "rating":
+            return getNumericRating(b) - getNumericRating(a) || a.name.localeCompare(b.name);
+        default:
+            return (
+                Number(b.nyu_discount) - Number(a.nyu_discount) ||
+                getNumericRating(b) - getNumericRating(a) ||
+                getPriceLevel(a) - getPriceLevel(b) ||
+                a.name.localeCompare(b.name)
+            );
+    }
+}
+
+function matchesSearch(space, query) {
+    if (!query) return true;
+
+    const haystack = [
+        space.name,
+        space.address,
+        space.vibe,
+        ...(Array.isArray(space.tags) ? space.tags : []),
+        space.category,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    return haystack.includes(query);
+}
+
+function toggleBudgetPrice(currentValue) {
+    return Number(currentValue) <= 2 ? 4 : 2;
+}
 
 function mapSpace(s) {
     let tags = [];
@@ -31,15 +136,16 @@ function mapSpace(s) {
     }
 
     return {
-        id: s.google_place_id,
+        id: s.google_place_id || s.id,
         name: s.name,
         address: s.address || "",
-        rating: "—",
+        rating: s.rating || "—",
         price: PRICE_MAP[s.price_range] || "$",
         vibe: s.vibe || s.noise_level || "—",
-        distance: "—",
+        distance: s.distance || "—",
         tags,
-        nyu_discount: s.nyu_discount,
+        nyu_discount: !!s.nyu_discount,
+        raw: s,
     };
 }
 
@@ -99,8 +205,11 @@ export default function DiscoverPage() {
     const [showExtraPanel, setShowExtraPanel] = useState(false);
     const [allSpaces, setAllSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [priceValue, setPriceValue] = useState(50);
+    const [priceValue, setPriceValue] = useState(4);
     const [favoriteIds, setFavoriteIds] = useState([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("all");
+    const [sortBy, setSortBy] = useState("recommended");
 
     const [filters, setFilters] = useState({
         wifi: false,
@@ -121,7 +230,13 @@ export default function DiscoverPage() {
             if (activeFilters.nyu_discount) backendFilters.nyu_discount = true;
 
             const data = await getSpaces(backendFilters);
-            setAllSpaces(Array.isArray(data) ? data.map(mapSpace) : []);
+            const mapped = Array.isArray(data) ? data.map(mapSpace) : [];
+            setAllSpaces(
+                mapped.map((space) => ({
+                    ...space,
+                    category: inferCategory(space),
+                }))
+            );
         } catch (err) {
             console.error("Failed to fetch spaces:", err);
         } finally {
@@ -155,8 +270,6 @@ export default function DiscoverPage() {
 
     useEffect(() => {
         async function init() {
-            await loadSpaces();
-
             const user =
                 typeof window !== "undefined"
                     ? JSON.parse(localStorage.getItem("user"))
@@ -178,6 +291,20 @@ export default function DiscoverPage() {
         init();
     }, []);
 
+    useEffect(() => {
+        loadSpaces(filters);
+    }, [filters]);
+
+    const visibleSpaces = useMemo(() => {
+        const normalizedQuery = normalizeText(searchQuery);
+
+        return [...allSpaces]
+            .filter((space) => matchesSearch(space, normalizedQuery))
+            .filter((space) => selectedCategory === "all" || space.category === selectedCategory)
+            .filter((space) => getPriceLevel(space) <= Number(priceValue))
+            .sort((a, b) => compareSpaces(a, b, sortBy));
+    }, [allSpaces, priceValue, searchQuery, selectedCategory, sortBy]);
+
     function toggleBooleanFilter(key) {
         setFilters((prev) => ({
             ...prev,
@@ -193,21 +320,21 @@ export default function DiscoverPage() {
     }
 
     function clearFilters() {
-        const cleared = {
+        setFilters({
             wifi: false,
             noise_level: "",
             laptop_friendly: false,
             nyu_discount: false,
-        };
-
-        setFilters(cleared);
-        loadSpaces(cleared);
+        });
+        setSearchQuery("");
+        setSelectedCategory("all");
+        setSortBy("recommended");
+        setPriceValue(4);
         setShowExtraPanel(false);
         setShowFilters(false);
     }
 
     function applyFilters() {
-        loadSpaces(filters);
         setShowExtraPanel(false);
         setShowFilters(false);
     }
@@ -233,11 +360,9 @@ export default function DiscoverPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <AuthButton />
-
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
+                            className="flex cursor-pointer items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
                         >
                             <SlidersHorizontal size={16} />
                             Filters
@@ -246,39 +371,54 @@ export default function DiscoverPage() {
                 </header>
 
                 <div className="mt-6">
-                    <input
-                        type="text"
-                        placeholder="Search cafes, libraries, spaces..."
-                        className="w-full rounded-full border border-white/8 bg-white/8 px-5 py-4 text-lg text-white outline-none backdrop-blur-md placeholder:text-white/35"
-                    />
+                    <div className="flex flex-col gap-3 lg:flex-row">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search cafes, libraries, spaces..."
+                            className="w-full rounded-full border border-white/8 bg-white/8 px-5 py-4 text-lg text-white outline-none backdrop-blur-md placeholder:text-white/35"
+                        />
+
+                        <label className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/8 px-4 py-3 text-sm text-white/80 backdrop-blur-md">
+                            <ArrowUpDown size={16} />
+                            <span className="sr-only">Sort spaces</span>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="cursor-pointer bg-transparent text-white outline-none"
+                            >
+                                <option className="bg-[#0f1b33]" value="recommended">Recommended</option>
+                                <option className="bg-[#0f1b33]" value="rating">Highest rated</option>
+                                <option className="bg-[#0f1b33]" value="price-low">Price: Low to High</option>
+                                <option className="bg-[#0f1b33]" value="price-high">Price: High to Low</option>
+                                <option className="bg-[#0f1b33]" value="name">Name: A-Z</option>
+                            </select>
+                        </label>
+                    </div>
 
                     <p className="mt-3 text-white/60">Near NYU Washington Square</p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                            onClick={clearFilters}
-                            className="rounded-full bg-blue-600 px-4 py-2 text-sm text-white"
-                        >
-                            All
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Cafes
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Libraries
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Coworking
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Lounges
-                        </button>
+                        {CATEGORY_OPTIONS.map((category) => (
+                            <button
+                                key={category.value}
+                                onClick={() => setSelectedCategory(category.value)}
+                                className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
+                                    selectedCategory === category.value
+                                        ? "border-blue-400 bg-blue-600 text-white"
+                                        : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                            >
+                                {category.label}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2">
                         <button
                             onClick={() => toggleBooleanFilter("wifi")}
-                            className={`rounded-full border px-4 py-2 text-sm ${filters.wifi
+                            className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${filters.wifi
                                     ? "border-blue-400 bg-blue-600 text-white"
                                     : "border-white/10 bg-white/8 text-white/80"
                                 }`}
@@ -288,7 +428,7 @@ export default function DiscoverPage() {
 
                         <button
                             onClick={() => setNoiseFilter("quiet")}
-                            className={`rounded-full border px-4 py-2 text-sm ${filters.noise_level === "quiet"
+                            className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${filters.noise_level === "quiet"
                                     ? "border-blue-400 bg-blue-600 text-white"
                                     : "border-white/10 bg-white/8 text-white/80"
                                 }`}
@@ -296,17 +436,29 @@ export default function DiscoverPage() {
                             Quiet
                         </button>
 
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+                        <button
+                            onClick={() => setPriceValue((prev) => toggleBudgetPrice(prev))}
+                            className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${
+                                Number(priceValue) <= 2
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                            }`}
+                        >
                             Budget
                         </button>
 
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
+                        <button
+                            type="button"
+                            disabled
+                            title="Open now filtering is not available from the current data source yet."
+                            className="cursor-not-allowed rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/40"
+                        >
                             Open Now
                         </button>
 
                         <button
                             onClick={() => toggleBooleanFilter("nyu_discount")}
-                            className={`rounded-full border px-4 py-2 text-sm ${filters.nyu_discount
+                            className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${filters.nyu_discount
                                     ? "border-blue-400 bg-blue-600 text-white"
                                     : "border-white/10 bg-white/8 text-white/80"
                                 }`}
@@ -316,7 +468,7 @@ export default function DiscoverPage() {
 
                         <button
                             onClick={() => toggleBooleanFilter("laptop_friendly")}
-                            className={`rounded-full border px-4 py-2 text-sm ${filters.laptop_friendly
+                            className={`cursor-pointer rounded-full border px-4 py-2 text-sm ${filters.laptop_friendly
                                     ? "border-blue-400 bg-blue-600 text-white"
                                     : "border-white/10 bg-white/8 text-white/80"
                                 }`}
@@ -326,7 +478,7 @@ export default function DiscoverPage() {
 
                         <button
                             onClick={() => setShowExtraPanel(true)}
-                            className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80 hover:bg-white/12"
+                            className="cursor-pointer rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80 hover:bg-white/12"
                         >
                             etc.
                         </button>
@@ -339,7 +491,7 @@ export default function DiscoverPage() {
                                     <h3 className="text-lg font-semibold text-white">Filters</h3>
                                     <button
                                         onClick={() => setShowExtraPanel(false)}
-                                        className="text-white/60 hover:text-white"
+                                        className="cursor-pointer text-white/60 hover:text-white"
                                     >
                                         ✕
                                     </button>
@@ -352,7 +504,7 @@ export default function DiscoverPage() {
                                             <button
                                                 key={item}
                                                 onClick={() => setNoiseFilter(item)}
-                                                className={`rounded-full border px-4 py-1.5 text-sm ${filters.noise_level === item
+                                                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${filters.noise_level === item
                                                         ? "border-blue-400 bg-blue-600 text-white"
                                                         : "border-white/10 bg-white/8 text-white/80"
                                                     }`}
@@ -368,7 +520,7 @@ export default function DiscoverPage() {
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         <button
                                             onClick={() => toggleBooleanFilter("wifi")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.wifi
+                                            className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${filters.wifi
                                                     ? "border-blue-400 bg-blue-600 text-white"
                                                     : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
@@ -382,7 +534,7 @@ export default function DiscoverPage() {
 
                                         <button
                                             onClick={() => toggleBooleanFilter("laptop_friendly")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.laptop_friendly
+                                            className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${filters.laptop_friendly
                                                     ? "border-blue-400 bg-blue-600 text-white"
                                                     : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
@@ -396,7 +548,7 @@ export default function DiscoverPage() {
 
                                         <button
                                             onClick={() => toggleBooleanFilter("nyu_discount")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.nyu_discount
+                                            className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${filters.nyu_discount
                                                     ? "border-blue-400 bg-blue-600 text-white"
                                                     : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
@@ -409,12 +561,17 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Price</h4>
                                     <div className="mt-2 flex gap-2">
-                                        {["$", "$$", "$$$", "$$$$"].map((p) => (
+                                        {[1, 2, 3, 4].map((level) => (
                                             <button
-                                                key={p}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                                key={level}
+                                                onClick={() => setPriceValue(level)}
+                                                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${
+                                                    Number(priceValue) === level
+                                                        ? "border-blue-400 bg-blue-600 text-white"
+                                                        : "border-white/10 bg-white/8 text-white/80"
+                                                }`}
                                             >
-                                                {p}
+                                                {PRICE_MAP[level]}
                                             </button>
                                         ))}
                                     </div>
@@ -423,13 +580,13 @@ export default function DiscoverPage() {
                                 <div className="mt-6 flex gap-3">
                                     <button
                                         onClick={clearFilters}
-                                        className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5"
+                                        className="flex-1 cursor-pointer rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5"
                                     >
                                         Clear
                                     </button>
                                     <button
                                         onClick={applyFilters}
-                                        className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                                        className="flex-1 cursor-pointer rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                                     >
                                         Apply
                                     </button>
@@ -452,7 +609,7 @@ export default function DiscoverPage() {
                                     <h2 className="text-2xl font-semibold">Filters</h2>
                                     <button
                                         onClick={() => setShowFilters(false)}
-                                        className="text-white/60 hover:text-white"
+                                        className="cursor-pointer text-white/60 hover:text-white"
                                     >
                                         ✕
                                     </button>
@@ -462,22 +619,23 @@ export default function DiscoverPage() {
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-lg font-medium text-white/85">Price Range</h3>
                                         <span className="rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
-                                            ${priceValue}
+                                            Up to {PRICE_MAP[Number(priceValue)]}
                                         </span>
                                     </div>
 
                                     <input
                                         type="range"
-                                        min="0"
-                                        max="100"
+                                        min="1"
+                                        max="4"
+                                        step="1"
                                         value={priceValue}
-                                        onChange={(e) => setPriceValue(e.target.value)}
+                                        onChange={(e) => setPriceValue(Number(e.target.value))}
                                         className="mt-4 w-full accent-blue-500"
                                     />
 
                                     <div className="mt-2 flex justify-between text-sm text-white/60">
-                                        <span>$0</span>
-                                        <span>${priceValue}</span>
+                                        <span>$</span>
+                                        <span>{PRICE_MAP[Number(priceValue)]}</span>
                                     </div>
                                 </div>
 
@@ -585,13 +743,13 @@ export default function DiscoverPage() {
                                 <div className="mt-8 flex gap-2">
                                     <button
                                         onClick={clearFilters}
-                                        className="w-1/2 rounded-full border border-white/10 px-4 py-3 font-medium text-white/70 hover:bg-white/5"
+                                        className="w-1/2 cursor-pointer rounded-full border border-white/10 px-4 py-3 font-medium text-white/70 hover:bg-white/5"
                                     >
                                         Clear
                                     </button>
                                     <button
                                         onClick={applyFilters}
-                                        className="w-1/2 rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700"
+                                        className="w-1/2 cursor-pointer rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700"
                                     >
                                         Apply Filters
                                     </button>
@@ -603,7 +761,7 @@ export default function DiscoverPage() {
                     <div className="min-w-0 flex-1">
                         <Section
                             title="Featured Spots"
-                            spaces={allSpaces}
+                            spaces={visibleSpaces}
                             loading={loading}
                             favoriteIds={favoriteIds}
                             onToggleFavorite={toggleFavorite}
@@ -611,7 +769,7 @@ export default function DiscoverPage() {
                         <Section title="Popular This Week" spaces={[]} loading={false} hide />
                         <Section
                             title="NYU Spaces"
-                            spaces={allSpaces.filter((s) => s.nyu_discount)}
+                            spaces={visibleSpaces.filter((s) => s.nyu_discount)}
                             loading={loading}
                             favoriteIds={favoriteIds}
                             onToggleFavorite={toggleFavorite}

@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
 import Stars from "../../components/Stars";
-import { useAuth } from "../../context/AuthContext";
 import { getFavorites, removeFavorite } from "@/lib/favorites";
 import {
     House,
@@ -49,11 +47,25 @@ function mapFavorite(item) {
 }
 
 export default function FavoritesPage() {
-    const { user, isSignedIn } = useAuth();
-
+    const [user, setUser] = useState(null);
     const [savedSpaces, setSavedSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const isSignedIn = !!user?.id;
+
+    useEffect(() => {
+        try {
+            const storedUser =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
+
+            setUser(storedUser);
+        } catch (err) {
+            console.error("Could not read signed-in user:", err);
+            setUser(null);
+        }
+    }, []);
 
     useEffect(() => {
         async function fetchFavorites() {
@@ -114,7 +126,6 @@ export default function FavoritesPage() {
                         </span>
                     </div>
 
-                    <AuthButton />
                 </header>
 
                 <div className="mt-6 flex items-center gap-2 text-sm text-white/70 hover:text-white">

@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
 import Stars from "../../components/Stars";
-import { useAuth } from "../../context/AuthContext";
 import { getSpaces } from "@/lib/spaces";
 import {
     House,
@@ -80,14 +78,29 @@ function Section({ title, subtitle, icon, spaces }) {
 }
 
 export default function NYUPage() {
-    const { user, isSignedIn, isNYU } = useAuth();
     const searchParams = useSearchParams();
-
     const backTo = searchParams.get("from") || "/discover";
 
+    const [user, setUser] = useState(null);
     const [allSpaces, setAllSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const isSignedIn = !!user?.id;
+    const isNYU = typeof user?.email === "string" && user.email.toLowerCase().endsWith("@nyu.edu");
+
+    useEffect(() => {
+        try {
+            const storedUser =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
+
+            setUser(storedUser);
+        } catch (err) {
+            console.error("Could not read signed-in user:", err);
+            setUser(null);
+        }
+    }, []);
 
     useEffect(() => {
         async function fetchSpaces() {
@@ -179,7 +192,6 @@ export default function NYUPage() {
                         </span>
                     </div>
 
-                    <AuthButton />
                 </header>
 
                 {/* Back */}

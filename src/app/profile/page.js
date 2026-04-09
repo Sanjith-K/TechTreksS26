@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
-import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
 import Stars from "../../components/Stars";
 import { getFavorites } from "@/lib/favorites";
@@ -56,16 +54,31 @@ function mapFavorite(item) {
 }
 
 export default function ProfilePage() {
-    const { user, isSignedIn, setUser } = useAuth();
     const router = useRouter();
 
+    const [user, setUser] = useState(null);
     const [favoriteSpaces, setFavoriteSpaces] = useState([]);
     const [favoritesLoading, setFavoritesLoading] = useState(true);
+    const isSignedIn = !!user?.id;
 
     const initial =
         user?.name?.[0]?.toUpperCase() ||
         user?.email?.[0]?.toUpperCase() ||
         "U";
+
+    useEffect(() => {
+        try {
+            const storedUser =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
+
+            setUser(storedUser);
+        } catch (err) {
+            console.error("Could not read signed-in user:", err);
+            setUser(null);
+        }
+    }, []);
 
     useEffect(() => {
         async function loadFavorites() {
@@ -119,7 +132,6 @@ export default function ProfilePage() {
                         </span>
                     </div>
 
-                    <AuthButton />
                 </header>
 
                 {/* Back */}
