@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../../../context/AuthContext";
 import { useParams } from "next/navigation";
 import {
     ArrowLeft,
@@ -56,6 +57,35 @@ export default function StorePage() {
     const [space, setSpace] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const { user } = useContext(AuthContext);
+    const [isFavorited, setIsFavorited] = useState(false);
+
+    async function handleToggleFavorite() {
+        if (!user) return;
+        try {
+            if (isFavorited) {
+                await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites/${id}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+                setIsFavorited(false);
+            } else {
+                await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ space_id: id }),
+                    }
+                );
+                setIsFavorited(true);
+            }
+        } catch (err) {
+            console.error("Favorite update failed:", err);
+        }
+    }
 
     useEffect(() => {
         async function fetchSpace() {
@@ -195,8 +225,12 @@ export default function StorePage() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <button className="rounded-full bg-white/10 p-2 hover:bg-white/15">
-                                <Heart size={16} />
+                            <button
+                                type="button"
+                                onClick={handleToggleFavorite}
+                                className={`rounded-full p-2 hover:bg-white/15 ${isFavorited ? "bg-red-500/30 text-red-400" : "bg-white/10"}`}
+                            >
+                                <Heart size={16} fill={isFavorited ? "currentColor" : "none"} />
                             </button>
                             <span className="rounded-full bg-green-600/20 px-3 py-1 text-sm text-green-300">
                                 Open
