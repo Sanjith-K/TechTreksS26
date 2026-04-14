@@ -30,9 +30,14 @@ def get_favorites(user_id: str):
 @router.post("/{user_id}/favorites")
 def add_favorite(user_id: str, body: dict):
     space_id = unquote(body["space_id"])
-    response = supabase.table("favorites") \
-        .insert({"user_id": user_id, "space_id": space_id}) \
-        .execute()
+    try:
+        response = supabase.table("favorites") \
+            .insert({"user_id": user_id, "space_id": space_id}) \
+            .execute()
+    except Exception as e:
+        if "23505" in str(e):
+            return {"message": "already favorited"}
+        raise
     if not response.data:
         raise HTTPException(status_code=400, detail="Could not add favorite")
     return response.data[0]

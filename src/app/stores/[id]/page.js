@@ -114,6 +114,32 @@ export default function StorePage() {
         }
     }, [id]);
 
+    useEffect(() => {
+        if (!user?.id || !id) return;
+
+        let cancelled = false;
+
+        async function loadFavoriteState() {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`
+                );
+                if (!res.ok || cancelled) return;
+                const favorites = await res.json();
+                const decodedId = decodeURIComponent(id);
+                const match = favorites.some((f) => f.space_id === decodedId);
+                if (!cancelled) setIsFavorited(match);
+            } catch (err) {
+                console.error("Failed to load favorite state:", err);
+            }
+        }
+
+        loadFavoriteState();
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id, id]);
+
     if (loading) {
         return (
             <main className="min-h-screen bg-[#07152b] px-6 py-10 text-white">
