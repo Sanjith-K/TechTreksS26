@@ -37,8 +37,8 @@ def signup(data: SignupRequest):
             "username": data.name,
             "email": data.email,
         }).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Profile creation error during signup: {e}")
 
     return {"message": "Account created successfully."}
 
@@ -57,7 +57,20 @@ def login(data: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     profile = supabase.table("Profiles").select("*").eq("email", response.user.email).execute()
-    name = profile.data[0].get("username") if profile.data else response.user.user_metadata.get("name", "")
+
+    if not profile.data:
+        # Profile missing (e.g. signup profile insert failed) — create it now
+        name = response.user.user_metadata.get("name", data.email.split("@")[0])
+        try:
+            supabase.table("Profiles").insert({
+                "id": response.user.id,
+                "username": name,
+                "email": data.email,
+            }).execute()
+        except Exception as e:
+            print(f"Profile auto-create on login failed: {e}")
+    else:
+        name = profile.data[0].get("username", "")
 
     return {
         "user": {
