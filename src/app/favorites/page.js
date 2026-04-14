@@ -137,8 +137,12 @@ export default function FavoritesPage() {
                         </div>
                     ) : (
                         savedSpaces.map((space) => (
-                            <Link key={space.id} href={`/stores/${space.id}`} className="block">
-                                <SpaceCard {...space} />
+                            <Link
+                                key={space.id}
+                                href={`/stores/${space.Spaces?.google_place_id || space.space_id}`}
+                                className="block"
+                            >
+                                <SpaceCard {...space.Spaces} />
                             </Link>
                         ))
                     )}
