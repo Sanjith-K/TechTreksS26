@@ -27,6 +27,16 @@ def get_favorites(user_id: str):
         .execute()
     return response.data
 
+def _ensure_profile(user_id: str):
+    """Insert a placeholder profile if one doesn't exist for this user_id."""
+    try:
+        supabase.table("Profiles").upsert(
+            {"id": user_id, "username": "", "email": ""},
+            on_conflict="id"
+        ).execute()
+    except Exception as e:
+        print(f"Profile upsert failed for {user_id}: {e}")
+
 @router.post("/{user_id}/favorites")
 def add_favorite(user_id: str, body: dict):
     space_id = unquote(body["space_id"])
@@ -42,6 +52,19 @@ def add_favorite(user_id: str, body: dict):
     except Exception as e:
         if "23505" in str(e):
             return {"message": "already favorited"}
+        if "23503" in str(e) and "user_id" in str(e):
+            # Profile row missing — create it and retry once
+            _ensure_profile(user_id)
+            try:
+                response = supabase.table("favorites") \
+                    .insert({"user_id": user_id, "space_id": space_id}) \
+                    .execute()
+                if not response.data:
+                    raise HTTPException(status_code=400, detail="Could not add favorite")
+                return response.data[0]
+            except Exception as e2:
+                print(f"Add favorite retry failed: {e2}")
+                raise HTTPException(status_code=500, detail=str(e2))
         print(f"Add favorite error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
