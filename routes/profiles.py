@@ -1,3 +1,5 @@
+from urllib.parse import unquote
+
 from fastapi import APIRouter, HTTPException
 from database import supabase
 
@@ -27,8 +29,9 @@ def get_favorites(user_id: str):
 
 @router.post("/{user_id}/favorites")
 def add_favorite(user_id: str, body: dict):
+    space_id = unquote(body["space_id"])
     response = supabase.table("favorites") \
-        .insert({"user_id": user_id, "space_id": body["space_id"]}) \
+        .insert({"user_id": user_id, "space_id": space_id}) \
         .execute()
     if not response.data:
         raise HTTPException(status_code=400, detail="Could not add favorite")
