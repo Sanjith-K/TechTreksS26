@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getFavorites, addFavorite, removeFavorite } from "@/lib/favorites";
 import Stars from "../../components/Stars";
 import { getSpaces } from "@/lib/spaces";
@@ -17,6 +17,13 @@ import {
 } from "lucide-react";
 
 const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
+
+const CATEGORY_KEYWORDS = {
+    cafe: ["cafe", "café", "coffee", "cafes"],
+    library: ["library", "libraries"],
+    coworking: ["coworking", "co-working", "cowork"],
+    lounge: ["lounge", "lounges"],
+};
 
 function mapSpace(s) {
     let tags = [];
@@ -36,10 +43,15 @@ function mapSpace(s) {
         address: s.address || "",
         rating: "—",
         price: PRICE_MAP[s.price_range] || "$",
+        price_range: s.price_range,
         vibe: s.vibe || s.noise_level || "—",
+        noise_level: (s.noise_level || "").toLowerCase(),
         distance: "—",
         tags,
+        type: (s.type || s.category || "").toLowerCase(),
         nyu_discount: s.nyu_discount,
+        wifi: s.wifi,
+        laptop_friendly: s.laptop_friendly,
     };
 }
 
@@ -101,13 +113,42 @@ export default function DiscoverPage() {
     const [loading, setLoading] = useState(true);
     const [priceValue, setPriceValue] = useState(50);
     const [favoriteIds, setFavoriteIds] = useState([]);
+    const [activeCategory, setActiveCategory] = useState(null);
 
     const [filters, setFilters] = useState({
         wifi: false,
         noise_level: "",
         laptop_friendly: false,
         nyu_discount: false,
+        budget: false,
     });
+
+    const filteredSpaces = useMemo(() => {
+        let result = allSpaces;
+
+        if (activeCategory) {
+            if (activeCategory === "coworking") {
+                result = result.filter((s) => s.noise_level === "moderate" || s.noise_level === "lively");
+            } else {
+                const keywords = CATEGORY_KEYWORDS[activeCategory] || [activeCategory];
+                result = result.filter((s) => {
+                    const tagsLower = s.tags.map((t) => t.toLowerCase());
+                    return (
+                        keywords.some((kw) => s.type.includes(kw)) ||
+                        keywords.some((kw) => tagsLower.some((t) => t.includes(kw)))
+                    );
+                });
+            }
+        }
+
+        if (filters.wifi) result = result.filter((s) => s.wifi);
+        if (filters.noise_level) result = result.filter((s) => s.noise_level === filters.noise_level);
+        if (filters.laptop_friendly) result = result.filter((s) => s.laptop_friendly);
+        if (filters.nyu_discount) result = result.filter((s) => s.nyu_discount);
+        if (filters.budget) result = result.filter((s) => s.price_range === 1);
+
+        return result;
+    }, [allSpaces, activeCategory, filters]);
 
     async function loadSpaces(activeFilters = {}) {
         try {
@@ -198,9 +239,11 @@ export default function DiscoverPage() {
             noise_level: "",
             laptop_friendly: false,
             nyu_discount: false,
+            budget: false,
         };
 
         setFilters(cleared);
+        setActiveCategory(null);
         loadSpaces(cleared);
         setShowExtraPanel(false);
         setShowFilters(false);
@@ -257,22 +300,27 @@ export default function DiscoverPage() {
                     <div className="mt-4 flex flex-wrap gap-2">
                         <button
                             onClick={clearFilters}
-                            className="rounded-full bg-blue-600 px-4 py-2 text-sm text-white"
+                            className={`rounded-full px-4 py-2 text-sm ${!activeCategory ? "bg-blue-600 text-white" : "border border-white/10 bg-white/8 text-white/80"}`}
                         >
                             All
                         </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Cafes
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Libraries
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Coworking
-                        </button>
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Lounges
-                        </button>
+                        {[
+                            { label: "Cafes", key: "cafe" },
+                            { label: "Libraries", key: "library" },
+                            { label: "Coworking", key: "coworking" },
+                            { label: "Lounges", key: "lounge" },
+                        ].map(({ label, key }) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveCategory(activeCategory === key ? null : key)}
+                                className={`rounded-full border px-4 py-2 text-sm ${activeCategory === key
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -296,12 +344,14 @@ export default function DiscoverPage() {
                             Quiet
                         </button>
 
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Budget
-                        </button>
-
-                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80">
-                            Open Now
+                        <button
+                            onClick={() => toggleBooleanFilter("budget")}
+                            className={`rounded-full border px-4 py-2 text-sm ${filters.budget
+                                    ? "border-blue-400 bg-blue-600 text-white"
+                                    : "border-white/10 bg-white/8 text-white/80"
+                                }`}
+                        >
+                            $
                         </button>
 
                         <button
@@ -603,7 +653,7 @@ export default function DiscoverPage() {
                     <div className="min-w-0 flex-1">
                         <Section
                             title="Featured Spots"
-                            spaces={allSpaces}
+                            spaces={filteredSpaces}
                             loading={loading}
                             favoriteIds={favoriteIds}
                             onToggleFavorite={toggleFavorite}
@@ -611,7 +661,7 @@ export default function DiscoverPage() {
                         <Section title="Popular This Week" spaces={[]} loading={false} hide />
                         <Section
                             title="NYU Spaces"
-                            spaces={allSpaces.filter((s) => s.nyu_discount)}
+                            spaces={filteredSpaces.filter((s) => s.nyu_discount)}
                             loading={loading}
                             favoriteIds={favoriteIds}
                             onToggleFavorite={toggleFavorite}
