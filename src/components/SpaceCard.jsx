@@ -31,7 +31,7 @@ export default function SpaceCard({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-                {tags.map((tag) => (
+                {(tags || []).map((tag) => (
                     <span
                         key={tag}
                         className="rounded-full border border-white/8 bg-white/8 px-3 py-1 text-xs text-white/70"
