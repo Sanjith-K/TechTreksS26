@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "../../../context/AuthContext";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { getSpaceById } from "@/lib/spaces";
+import { getFavorites, addFavorite, removeFavorite } from "@/lib/favorites";
 import {
     ArrowLeft,
     Share2,
@@ -57,50 +58,31 @@ export default function StorePage() {
     const [space, setSpace] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const { user } = useContext(AuthContext);
     const [isFavorited, setIsFavorited] = useState(false);
-
-    async function handleToggleFavorite() {
-        if (!user) return;
-        try {
-            if (isFavorited) {
-                await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites/${id}`,
-                    {
-                        method: "DELETE",
-                    }
-                );
-                setIsFavorited(false);
-            } else {
-                await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ space_id: id }),
-                    }
-                );
-                setIsFavorited(true);
-            }
-        } catch (err) {
-            console.error("Favorite update failed:", err);
-        }
-    }
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
 
     useEffect(() => {
-        async function fetchSpace() {
+        async function loadPage() {
             try {
                 setLoading(true);
                 setError("");
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/${id}`);
-
-                if (!res.ok) {
-                    throw new Error("Could not load this study spot.");
-                }
-
-                const data = await res.json();
+                const data = await getSpaceById(id);
                 setSpace(data);
+
+                const user =
+                    typeof window !== "undefined"
+                        ? JSON.parse(localStorage.getItem("user"))
+                        : null;
+
+                if (user?.id) {
+                    const favorites = await getFavorites(user.id);
+                    const alreadyFavorited = Array.isArray(favorites)
+                        ? favorites.some((item) => item.space_id === id)
+                        : false;
+
+                    setIsFavorited(alreadyFavorited);
+                }
             } catch (err) {
                 console.error(err);
                 setError("Could not load this study spot.");
@@ -110,35 +92,38 @@ export default function StorePage() {
         }
 
         if (id) {
-            fetchSpace();
+            loadPage();
         }
     }, [id]);
 
-    useEffect(() => {
-        if (!user?.id || !id) return;
+    async function handleToggleFavorite() {
+        try {
+            const user =
+                typeof window !== "undefined"
+                    ? JSON.parse(localStorage.getItem("user"))
+                    : null;
 
-        let cancelled = false;
-
-        async function loadFavoriteState() {
-            try {
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`
-                );
-                if (!res.ok || cancelled) return;
-                const favorites = await res.json();
-                const decodedId = decodeURIComponent(id);
-                const match = favorites.some((f) => f.space_id === decodedId);
-                if (!cancelled) setIsFavorited(match);
-            } catch (err) {
-                console.error("Failed to load favorite state:", err);
+            if (!user?.id) {
+                alert("Please sign in first.");
+                return;
             }
-        }
 
-        loadFavoriteState();
-        return () => {
-            cancelled = true;
-        };
-    }, [user?.id, id]);
+            setFavoriteLoading(true);
+
+            if (isFavorited) {
+                await removeFavorite(user.id, id);
+                setIsFavorited(false);
+            } else {
+                await addFavorite(user.id, id);
+                setIsFavorited(true);
+            }
+        } catch (err) {
+            console.error("Favorite update failed:", err);
+            alert("Could not update favorite.");
+        } finally {
+            setFavoriteLoading(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -162,16 +147,17 @@ export default function StorePage() {
     const tags = parseTags(space.tags);
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-[#07152b] text-white">
+        <main className="relative min-h-screen overflow-hidden bg-[#07152b] pb-28 text-white">
             {/* Background */}
-            <div className="pointer-events-none absolute inset-0">
+            <div className="pointer-events-none absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
+
             {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                 {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
+                    const size = Math.random() * 2 + 1;
                     const left = Math.random() * 100;
                     const top = Math.random() * 100;
                     const delay = Math.random() * 3;
@@ -179,7 +165,7 @@ export default function StorePage() {
                     return (
                         <span
                             key={i}
-                            className="star"
+                            className="star absolute rounded-full bg-white"
                             style={{
                                 width: `${size}px`,
                                 height: `${size}px`,
@@ -254,10 +240,15 @@ export default function StorePage() {
                             <button
                                 type="button"
                                 onClick={handleToggleFavorite}
-                                className={`rounded-full p-2 hover:bg-white/15 ${isFavorited ? "bg-red-500/30 text-red-400" : "bg-white/10"}`}
+                                disabled={favoriteLoading}
+                                className={`rounded-full p-2 transition ${isFavorited
+                                        ? "bg-pink-500/20 text-pink-300 shadow-[0_0_18px_rgba(244,114,182,0.28)]"
+                                        : "bg-white/10 text-white hover:bg-white/15"
+                                    } ${favoriteLoading ? "opacity-60" : ""}`}
                             >
-                                <Heart size={16} fill={isFavorited ? "currentColor" : "none"} />
+                                <Heart size={16} className={isFavorited ? "fill-current" : ""} />
                             </button>
+
                             <span className="rounded-full bg-green-600/20 px-3 py-1 text-sm text-green-300">
                                 Open
                             </span>
@@ -425,7 +416,7 @@ export default function StorePage() {
             </div>
 
             {/* Bottom Nav */}
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
                         <House size={20} />

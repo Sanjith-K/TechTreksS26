@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Stars from "../../components/Stars";
 import { useAuth } from "../../context/AuthContext";
+import { login } from "@/lib/auth";
 
 export default function SignInPage() {
     const router = useRouter();
@@ -25,32 +26,21 @@ export default function SignInPage() {
         setLoading(true);
 
         try {
-            console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+            const data = await login({ email, password });
 
-            const data = await res.json();
-            console.log("Response status:", res.status, "data:", data);
-
-            if (!res.ok) {
-                setError(data.detail || "Sign in failed.");
-                return;
-            }
-
-            console.log("Redirecting to:", redirectTo);
             if (data.user) {
                 setUser(data.user);
+                localStorage.setItem("user", JSON.stringify(data.user));
             } else {
-                setUser({ email });
+                const fallbackUser = { email };
+                setUser(fallbackUser);
+                localStorage.setItem("user", JSON.stringify(fallbackUser));
             }
 
             router.push(redirectTo);
         } catch (err) {
             console.error("Sign in failed:", err);
-            setError("Could not sign in. Please try again.");
+            setError(err.message || "Could not sign in. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -122,7 +112,7 @@ export default function SignInPage() {
                             />
 
                             {error && (
-                                <p className="text-sm text-red-300">
+                                <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                                     {error}
                                 </p>
                             )}
@@ -139,7 +129,10 @@ export default function SignInPage() {
                         <div className="mt-6 text-center text-sm text-white/55">
                             <p>
                                 Don’t have an account?{" "}
-                                <Link href="/signup" className="text-cyan-300 hover:text-cyan-200">
+                                <Link
+                                    href={`/signup?redirect=${encodeURIComponent(redirectTo)}`}
+                                    className="text-cyan-300 hover:text-cyan-200"
+                                >
                                     Create one
                                 </Link>
                             </p>
@@ -157,7 +150,7 @@ export default function SignInPage() {
 
                             <button
                                 type="button"
-                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10"
+                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-sm font-medium text-white/80 hover:bg-white/10"
                             >
                                 Continue with Google
                             </button>

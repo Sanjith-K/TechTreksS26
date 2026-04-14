@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
+import { useEffect, useState } from "react";
 import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
+import Stars from "../../components/Stars";
+import { getFavorites } from "@/lib/favorites";
 import {
     House,
     Map,
@@ -20,50 +23,91 @@ import {
     Pencil,
 } from "lucide-react";
 
+const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
+
+function parseTags(tags) {
+    if (!tags) return [];
+    if (Array.isArray(tags)) return tags;
+
+    if (typeof tags === "string") {
+        try {
+            return JSON.parse(tags);
+        } catch {
+            return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+        }
+    }
+
+    return [];
+}
+
+function mapFavorite(item) {
+    const s = item.Spaces || {};
+
+    return {
+        id: s.google_place_id,
+        name: s.name || "Unknown Space",
+        address: s.address || "",
+        rating: "—",
+        price: PRICE_MAP[s.price_range] || "$",
+        vibe: s.vibe || s.noise_level || "—",
+        distance: "—",
+        tags: parseTags(s.tags),
+    };
+}
+
 export default function ProfilePage() {
     const { user, isSignedIn, setUser } = useAuth();
     const router = useRouter();
 
-    const favoriteSpaces = user?.favorites || [];
+    const [favoriteSpaces, setFavoriteSpaces] = useState([]);
+    const [favoritesLoading, setFavoritesLoading] = useState(true);
+
     const initial =
         user?.name?.[0]?.toUpperCase() ||
         user?.email?.[0]?.toUpperCase() ||
         "U";
 
+    useEffect(() => {
+        async function loadFavorites() {
+            if (!isSignedIn || !user?.id) {
+                setFavoriteSpaces([]);
+                setFavoritesLoading(false);
+                return;
+            }
+
+            try {
+                setFavoritesLoading(true);
+                const data = await getFavorites(user.id);
+                setFavoriteSpaces(Array.isArray(data) ? data.map(mapFavorite) : []);
+            } catch (err) {
+                console.error("Failed to load profile favorites:", err);
+                setFavoriteSpaces([]);
+            } finally {
+                setFavoritesLoading(false);
+            }
+        }
+
+        loadFavorites();
+    }, [isSignedIn, user]);
+
+    function handleLogout() {
+        localStorage.removeItem("user");
+        setUser(null);
+        router.push("/");
+    }
+
     return (
-        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
+        <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
             {/* Background */}
-            <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
 
             {/* Content */}
-            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
+            <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-36 pt-6">
                 {/* Top header */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
@@ -171,7 +215,11 @@ export default function ProfilePage() {
                                 </button>
                             </div>
 
-                            {favoriteSpaces.length === 0 ? (
+                            {favoritesLoading ? (
+                                <div className="rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60 backdrop-blur-md">
+                                    Loading favorites...
+                                </div>
+                            ) : favoriteSpaces.length === 0 ? (
                                 <div className="rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60 backdrop-blur-md">
                                     No favorites saved yet.
                                 </div>
@@ -224,7 +272,7 @@ export default function ProfilePage() {
                                 </button>
 
                                 <button
-                                    onClick={() => { setUser(null); router.push("/"); }}
+                                    onClick={handleLogout}
                                     className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10"
                                 >
                                     <div className="flex items-center gap-3">
@@ -245,7 +293,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Bottom Nav */}
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
                         <House size={20} />

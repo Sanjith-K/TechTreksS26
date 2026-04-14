@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
+import Stars from "../../components/Stars";
 import { useAuth } from "../../context/AuthContext";
+import { getFavorites, removeFavorite } from "@/lib/favorites";
 import {
     House,
     Map,
@@ -13,6 +15,38 @@ import {
     User,
     ArrowLeft,
 } from "lucide-react";
+
+const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
+
+function parseTags(tags) {
+    if (!tags) return [];
+    if (Array.isArray(tags)) return tags;
+
+    if (typeof tags === "string") {
+        try {
+            return JSON.parse(tags);
+        } catch {
+            return tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+        }
+    }
+
+    return [];
+}
+
+function mapFavorite(item) {
+    const s = item.Spaces || {};
+
+    return {
+        id: s.google_place_id,
+        name: s.name || "Unknown Space",
+        address: s.address || "",
+        rating: "—",
+        price: PRICE_MAP[s.price_range] || "$",
+        vibe: s.vibe || s.noise_level || "—",
+        distance: "—",
+        tags: parseTags(s.tags),
+    };
+}
 
 export default function FavoritesPage() {
     const { user, isSignedIn } = useAuth();
@@ -33,17 +67,9 @@ export default function FavoritesPage() {
                 setLoading(true);
                 setError("");
 
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/profiles/${user.id}/favorites`
-                );
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(data.detail || "Could not load favorites.");
-                }
-
-                setSavedSpaces(Array.isArray(data) ? data : []);
+                const data = await getFavorites(user.id);
+                const mapped = Array.isArray(data) ? data.map(mapFavorite) : [];
+                setSavedSpaces(mapped);
             } catch (err) {
                 console.error(err);
                 setError("Could not load favorites.");
@@ -55,37 +81,29 @@ export default function FavoritesPage() {
         fetchFavorites();
     }, [isSignedIn, user]);
 
+    async function handleRemoveFavorite(spaceId) {
+        try {
+            if (!user?.id) return;
+
+            await removeFavorite(user.id, spaceId);
+            setSavedSpaces((prev) => prev.filter((space) => space.id !== spaceId));
+        } catch (err) {
+            console.error("Could not remove favorite:", err);
+        }
+    }
+
     return (
-        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
-            <div className="pointer-events-none absolute inset-0">
+        <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
+            {/* Background */}
+            <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
+
             {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1; // 1px–3px
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
+            <Stars />
 
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
-
-            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
+            <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-36 pt-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
@@ -120,36 +138,40 @@ export default function FavoritesPage() {
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {!isSignedIn ? (
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70 backdrop-blur-md">
                             Please sign in to view your favorites.
                         </div>
                     ) : error ? (
-                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-300">
+                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-red-300 backdrop-blur-md">
                             {error}
                         </div>
                     ) : loading ? (
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70 backdrop-blur-md">
                             Loading...
                         </div>
                     ) : savedSpaces.length === 0 ? (
-                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70">
+                        <div className="rounded-2xl border border-white/8 bg-white/8 p-6 text-white/70 backdrop-blur-md">
                             No saved places yet.
                         </div>
                     ) : (
                         savedSpaces.map((space) => (
-                            <Link
-                                key={space.id}
-                                href={`/stores/${space.Spaces?.google_place_id || space.space_id}`}
-                                className="block"
-                            >
-                                <SpaceCard {...space.Spaces} />
+                            <Link key={space.id} href={`/stores/${space.id}`} className="block">
+                                <SpaceCard
+                                    {...space}
+                                    isFavorited={true}
+                                    onToggleFavorite={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleRemoveFavorite(space.id);
+                                    }}
+                                />
                             </Link>
                         ))
                     )}
                 </div>
             </div>
 
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
                         <House size={20} />

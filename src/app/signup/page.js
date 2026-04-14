@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Stars from "../../components/Stars";
+import { signup } from "@/lib/auth";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -43,24 +44,7 @@ export default function SignUpPage() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, password }),
-            });
-
-            let data;
-            try {
-                data = await res.json();
-            } catch {
-                setError(`Server error (${res.status}). Try again later.`);
-                return;
-            }
-
-            if (!res.ok) {
-                setError(data.detail || "Signup failed.");
-                return;
-            }
+            const data = await signup({ name, email, password });
 
             setMessage(data.message || "Account created successfully.");
 
@@ -69,7 +53,7 @@ export default function SignUpPage() {
             }, 1200);
         } catch (err) {
             console.error("Signup failed:", err);
-            setError("Could not connect to server.");
+            setError(err.message || "Could not connect to server.");
         } finally {
             setLoading(false);
         }
@@ -89,7 +73,9 @@ export default function SignUpPage() {
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 py-6">
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
-                        <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">Be1</h1>
+                        <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
+                            Be1
+                        </h1>
                         <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">
                             space
                         </span>
@@ -110,7 +96,9 @@ export default function SignUpPage() {
                         className="w-full max-w-md rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md"
                     >
                         <div className="text-center">
-                            <h1 className="font-[Be1space] text-4xl tracking-wide">Create Account</h1>
+                            <h1 className="font-[Be1space] text-4xl tracking-wide">
+                                Create Account
+                            </h1>
                             <p className="mt-3 text-white/55">
                                 Join Be1space to save your favorite spots and build your study routine.
                             </p>
@@ -198,7 +186,7 @@ export default function SignUpPage() {
 
                             <button
                                 type="button"
-                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-white/85 hover:bg-white/10"
+                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-sm font-medium text-white/80 hover:bg-white/10"
                             >
                                 Continue with Google
                             </button>

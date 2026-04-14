@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
+import Stars from "../../components/Stars";
 import { useAuth } from "../../context/AuthContext";
+import { getSpaces } from "@/lib/spaces";
 import {
     House,
     Map,
@@ -61,7 +63,7 @@ function Section({ title, subtitle, icon, spaces }) {
             </div>
 
             {spaces.length === 0 ? (
-                <div className="rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60">
+                <div className="rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60 backdrop-blur-md">
                     No spots available in this section yet.
                 </div>
             ) : (
@@ -98,13 +100,7 @@ export default function NYUPage() {
                 setLoading(true);
                 setError("");
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/`);
-
-                if (!res.ok) {
-                    throw new Error("Could not load NYU spaces.");
-                }
-
-                const data = await res.json();
+                const data = await getSpaces();
                 const mapped = Array.isArray(data) ? data.map(mapSpace) : [];
                 setAllSpaces(mapped);
             } catch (err) {
@@ -122,8 +118,9 @@ export default function NYUPage() {
         const studentFavorites = allSpaces.filter(
             (space) =>
                 space.tags.some((tag) =>
-                    ["deep focus", "late night", "group work", "study session", "campus spot"]
-                        .includes(tag.toLowerCase())
+                    ["deep focus", "late night", "group work", "study session", "campus spot"].includes(
+                        tag.toLowerCase()
+                    )
                 )
         );
 
@@ -160,39 +157,17 @@ export default function NYUPage() {
     }, [allSpaces]);
 
     return (
-        <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
+        <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
             {/* Background */}
-            <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
-            <div className="pointer-events-none absolute inset-0">
-                {[...Array(60)].map((_, i) => {
-                    const size = Math.random() * 2 + 1;
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100;
-                    const delay = Math.random() * 3;
-
-                    return (
-                        <span
-                            key={i}
-                            className="star"
-                            style={{
-                                width: `${size}px`,
-                                height: `${size}px`,
-                                left: `${left}%`,
-                                top: `${top}%`,
-                                animationDelay: `${delay}s`,
-                            }}
-                        />
-                    );
-                })}
-            </div>
+            <Stars />
 
             {/* Content */}
-            <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
+            <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-36 pt-6">
                 {/* Header */}
                 <header className="flex items-center justify-between">
                     <div className="flex items-end gap-1">
@@ -217,7 +192,7 @@ export default function NYUPage() {
 
                 {/* Main content */}
                 {!isSignedIn ? (
-                    <section className="mt-6 rounded-3xl border border-white/8 bg-white/8 p-8 backdrop-blur-md text-center">
+                    <section className="mt-6 rounded-3xl border border-white/8 bg-white/8 p-8 text-center backdrop-blur-md">
                         <div className="mx-auto flex w-fit rounded-full bg-violet-500/20 p-3 text-violet-300">
                             <GraduationCap size={24} />
                         </div>
@@ -235,7 +210,7 @@ export default function NYUPage() {
                         </Link>
                     </section>
                 ) : !isNYU ? (
-                    <section className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-8 backdrop-blur-md text-center">
+                    <section className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-8 text-center backdrop-blur-md">
                         <div className="mx-auto flex w-fit rounded-full bg-red-500/15 p-3 text-red-300">
                             <GraduationCap size={24} />
                         </div>
@@ -272,11 +247,11 @@ export default function NYUPage() {
                         </section>
 
                         {loading ? (
-                            <div className="mt-10 rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60">
+                            <div className="mt-10 rounded-2xl border border-white/8 bg-white/8 p-5 text-white/60 backdrop-blur-md">
                                 Loading NYU spaces...
                             </div>
                         ) : error ? (
-                            <div className="mt-10 rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-red-300">
+                            <div className="mt-10 rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-red-300 backdrop-blur-md">
                                 {error}
                             </div>
                         ) : (
@@ -315,7 +290,7 @@ export default function NYUPage() {
             </div>
 
             {/* Bottom Nav */}
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
                         <House size={20} />
