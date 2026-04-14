@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Be1space";
+  src: url("/fonts/Astro-ZV68J.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Be1Logo";
+  src: url("/fonts/StarShieldV2-9M52K.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Be1Logo2";
+  src: url("/fonts/BraveEightyoneRegular-ZVGvm.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Be1Logo3";
+  src: url("/fonts/EdgeOfTheGalaxyRegular-OVEa6.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Be1Logo4";
+  src: url("/fonts/FutureTechnoItalic-X3EPj.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Be1Logo5";
+  src: url("/fonts/MandatoryPlaything-nRRd0.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes twinkle {
+
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 9999px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: twinkle 4s infinite ease-in-out;
+}

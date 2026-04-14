@@ -1,0 +1,18 @@
+to launch, use 2 seperate terminals. this must be done to differentiate between front and back end, as they run on 2 diff servers
+and communicate thru api. 
+
+# back end cmnds (fastapi thru railway)
+cd /Users/yourname/Desktop/Be1_Space
+railway login                
+railway init
+railway up
+
+# front end cmnds (nextjs)
+cd /Users/yourname/Desktop/Be1_Space
+npm install
+npm run dev
+
+backend on 8080 (private ran thru railway)
+front end on 3000
+
+backend auto launches as railway should be constantly up 
