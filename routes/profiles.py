@@ -19,6 +19,28 @@ def get_profile(profile_id: str):
         raise HTTPException(status_code=404, detail="Profile not found")
     return response.data[0]
 
+
+@router.post("/")
+def upsert_profile(body: dict):
+    """Create or update a profile. Called from the frontend when a profile is missing."""
+    user_id = body.get("id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="id is required")
+    try:
+        response = supabase.table("Profiles").upsert(
+            {
+                "id": user_id,
+                "username": body.get("username", ""),
+                "email": body.get("email", ""),
+            },
+            on_conflict="id"
+        ).execute()
+        return response.data[0] if response.data else {"id": user_id}
+    except Exception as e:
+        print(f"Profile upsert failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{user_id}/favorites")
 def get_favorites(user_id: str):
     response = supabase.table("favorites") \
@@ -27,15 +49,6 @@ def get_favorites(user_id: str):
         .execute()
     return response.data
 
-def _ensure_profile(user_id: str):
-    """Insert a placeholder profile if one doesn't exist for this user_id."""
-    try:
-        supabase.table("Profiles").upsert(
-            {"id": user_id, "username": "", "email": ""},
-            on_conflict="id"
-        ).execute()
-    except Exception as e:
-        print(f"Profile upsert failed for {user_id}: {e}")
 
 @router.post("/{user_id}/favorites")
 def add_favorite(user_id: str, body: dict):
@@ -52,21 +65,9 @@ def add_favorite(user_id: str, body: dict):
     except Exception as e:
         if "23505" in str(e):
             return {"message": "already favorited"}
-        if "23503" in str(e) and "user_id" in str(e):
-            # Profile row missing — create it and retry once
-            _ensure_profile(user_id)
-            try:
-                response = supabase.table("favorites") \
-                    .insert({"user_id": user_id, "space_id": space_id}) \
-                    .execute()
-                if not response.data:
-                    raise HTTPException(status_code=400, detail="Could not add favorite")
-                return response.data[0]
-            except Exception as e2:
-                print(f"Add favorite retry failed: {e2}")
-                raise HTTPException(status_code=500, detail=str(e2))
         print(f"Add favorite error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.delete("/{user_id}/favorites/{space_id}")
 def remove_favorite(user_id: str, space_id: str):

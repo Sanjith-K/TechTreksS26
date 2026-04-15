@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getFavorites, addFavorite, removeFavorite } from "@/lib/favorites";
+import { getFavorites, addFavorite, removeFavorite, ensureProfile } from "@/lib/favorites";
 import Stars from "../../components/Stars";
 import { getSpaces } from "@/lib/spaces";
 import AuthButton from "../../components/AuthButton";
@@ -186,7 +186,17 @@ export default function DiscoverPage() {
                 await removeFavorite(user.id, spaceId);
                 setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
             } else {
-                await addFavorite(user.id, spaceId);
+                try {
+                    await addFavorite(user.id, spaceId);
+                } catch (err) {
+                    if (err.message && err.message.includes("23503")) {
+                        // Profile row missing — create it using localStorage data then retry
+                        await ensureProfile(user);
+                        await addFavorite(user.id, spaceId);
+                    } else {
+                        throw err;
+                    }
+                }
                 setFavoriteIds((prev) => [...prev, spaceId]);
             }
         } catch (err) {
