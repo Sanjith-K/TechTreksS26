@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import AuthButton from "../../components/AuthButton";
 import {
@@ -15,6 +16,24 @@ import {
 import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
 
 export default function MapPage() {
+    const [spaces, setSpaces] = useState([]);
+
+    useEffect(() => {
+        async function loadSpaces() {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/spaces/map`
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                setSpaces(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        loadSpaces();
+    }, []);
+
     return (
         <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#07152b] text-white">
             {/* Background */}
@@ -111,9 +130,16 @@ export default function MapPage() {
                                 style={{ width: "100%", height: "100%" }}
                                 gestureHandling="greedy"
                             >
-                                <Marker position={{ lat: 40.7291, lng: -73.9965 }} />
-                                <Marker position={{ lat: 40.7303, lng: -73.9952 }} />
-                                <Marker position={{ lat: 40.7283, lng: -73.9973 }} />
+                                {spaces.map((space) => (
+                                    <Marker
+                                        key={space.google_place_id}
+                                        position={{
+                                            lat: space.latitude,
+                                            lng: space.longitude,
+                                        }}
+                                        title={space.name}
+                                    />
+                                ))}
                             </Map>
                         </APIProvider>
                     </div>
