@@ -121,6 +121,7 @@ export default function DiscoverPage() {
         laptop_friendly: false,
         nyu_discount: false,
         budget: false,
+        price_range: null,
     });
 
     const filteredSpaces = useMemo(() => {
@@ -160,6 +161,7 @@ export default function DiscoverPage() {
             if (activeFilters.noise_level) backendFilters.noise_level = activeFilters.noise_level;
             if (activeFilters.laptop_friendly) backendFilters.laptop_friendly = true;
             if (activeFilters.nyu_discount) backendFilters.nyu_discount = true;
+            if (activeFilters.price_range) backendFilters.price_range = activeFilters.price_range;
 
             const data = await getSpaces(backendFilters);
             setAllSpaces(Array.isArray(data) ? data.map(mapSpace) : []);
@@ -250,6 +252,7 @@ export default function DiscoverPage() {
             laptop_friendly: false,
             nyu_discount: false,
             budget: false,
+            price_range: null,
         };
 
         setFilters(cleared);
@@ -326,7 +329,7 @@ export default function DiscoverPage() {
                                 className={`rounded-full border px-4 py-2 text-sm ${activeCategory === key
                                     ? "border-blue-400 bg-blue-600 text-white"
                                     : "border-white/10 bg-white/8 text-white/80"
-                                }`}
+                                    }`}
                             >
                                 {label}
                             </button>
@@ -337,8 +340,8 @@ export default function DiscoverPage() {
                         <button
                             onClick={() => toggleBooleanFilter("wifi")}
                             className={`rounded-full border px-4 py-2 text-sm ${filters.wifi
-                                    ? "border-blue-400 bg-blue-600 text-white"
-                                    : "border-white/10 bg-white/8 text-white/80"
+                                ? "border-blue-400 bg-blue-600 text-white"
+                                : "border-white/10 bg-white/8 text-white/80"
                                 }`}
                         >
                             WiFi
@@ -347,8 +350,8 @@ export default function DiscoverPage() {
                         <button
                             onClick={() => setNoiseFilter("quiet")}
                             className={`rounded-full border px-4 py-2 text-sm ${filters.noise_level === "quiet"
-                                    ? "border-blue-400 bg-blue-600 text-white"
-                                    : "border-white/10 bg-white/8 text-white/80"
+                                ? "border-blue-400 bg-blue-600 text-white"
+                                : "border-white/10 bg-white/8 text-white/80"
                                 }`}
                         >
                             Quiet
@@ -357,8 +360,8 @@ export default function DiscoverPage() {
                         <button
                             onClick={() => toggleBooleanFilter("budget")}
                             className={`rounded-full border px-4 py-2 text-sm ${filters.budget
-                                    ? "border-blue-400 bg-blue-600 text-white"
-                                    : "border-white/10 bg-white/8 text-white/80"
+                                ? "border-blue-400 bg-blue-600 text-white"
+                                : "border-white/10 bg-white/8 text-white/80"
                                 }`}
                         >
                             $
@@ -367,8 +370,8 @@ export default function DiscoverPage() {
                         <button
                             onClick={() => toggleBooleanFilter("nyu_discount")}
                             className={`rounded-full border px-4 py-2 text-sm ${filters.nyu_discount
-                                    ? "border-blue-400 bg-blue-600 text-white"
-                                    : "border-white/10 bg-white/8 text-white/80"
+                                ? "border-blue-400 bg-blue-600 text-white"
+                                : "border-white/10 bg-white/8 text-white/80"
                                 }`}
                         >
                             NYU Discount
@@ -377,8 +380,8 @@ export default function DiscoverPage() {
                         <button
                             onClick={() => toggleBooleanFilter("laptop_friendly")}
                             className={`rounded-full border px-4 py-2 text-sm ${filters.laptop_friendly
-                                    ? "border-blue-400 bg-blue-600 text-white"
-                                    : "border-white/10 bg-white/8 text-white/80"
+                                ? "border-blue-400 bg-blue-600 text-white"
+                                : "border-white/10 bg-white/8 text-white/80"
                                 }`}
                         >
                             Laptop OK
@@ -413,8 +416,8 @@ export default function DiscoverPage() {
                                                 key={item}
                                                 onClick={() => setNoiseFilter(item)}
                                                 className={`rounded-full border px-4 py-1.5 text-sm ${filters.noise_level === item
-                                                        ? "border-blue-400 bg-blue-600 text-white"
-                                                        : "border-white/10 bg-white/8 text-white/80"
+                                                    ? "border-blue-400 bg-blue-600 text-white"
+                                                    : "border-white/10 bg-white/8 text-white/80"
                                                     }`}
                                             >
                                                 {item.charAt(0).toUpperCase() + item.slice(1)}
@@ -429,36 +432,28 @@ export default function DiscoverPage() {
                                         <button
                                             onClick={() => toggleBooleanFilter("wifi")}
                                             className={`rounded-full border px-4 py-1.5 text-sm ${filters.wifi
-                                                    ? "border-blue-400 bg-blue-600 text-white"
-                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                ? "border-blue-400 bg-blue-600 text-white"
+                                                : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
                                         >
                                             WiFi
                                         </button>
 
-                                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80">
-                                            Outlets
-                                        </button>
-
                                         <button
                                             onClick={() => toggleBooleanFilter("laptop_friendly")}
                                             className={`rounded-full border px-4 py-1.5 text-sm ${filters.laptop_friendly
-                                                    ? "border-blue-400 bg-blue-600 text-white"
-                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                ? "border-blue-400 bg-blue-600 text-white"
+                                                : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
                                         >
-                                            Laptop
-                                        </button>
-
-                                        <button className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80">
-                                            Bathroom
+                                            Laptop OK
                                         </button>
 
                                         <button
                                             onClick={() => toggleBooleanFilter("nyu_discount")}
                                             className={`rounded-full border px-4 py-1.5 text-sm ${filters.nyu_discount
-                                                    ? "border-blue-400 bg-blue-600 text-white"
-                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                ? "border-blue-400 bg-blue-600 text-white"
+                                                : "border-white/10 bg-white/8 text-white/80"
                                                 }`}
                                         >
                                             NYU Discount
@@ -469,17 +464,31 @@ export default function DiscoverPage() {
                                 <div className="mt-5">
                                     <h4 className="text-sm text-white/70">Price</h4>
                                     <div className="mt-2 flex gap-2">
-                                        {["$", "$$", "$$$", "$$$$"].map((p) => (
+                                        {[
+                                            { label: "$", value: 1 },
+                                            { label: "$$", value: 2 },
+                                            { label: "$$$", value: 3 },
+                                            { label: "$$$$", value: 4 },
+                                        ].map(({ label, value }) => (
                                             <button
-                                                key={p}
-                                                className="rounded-full border border-white/10 bg-white/8 px-4 py-1.5 text-sm text-white/80"
+                                                key={label}
+                                                onClick={() =>
+                                                    setFilters((prev) => ({
+                                                        ...prev,
+                                                        price_range: prev.price_range === value ? null : value,
+                                                        budget: value === 1 ? prev.price_range !== 1 : false,
+                                                    }))
+                                                }
+                                                className={`rounded-full border px-4 py-1.5 text-sm ${filters.price_range === value
+                                                    ? "border-blue-400 bg-blue-600 text-white"
+                                                    : "border-white/10 bg-white/8 text-white/80"
+                                                    }`}
                                             >
-                                                {p}
+                                                {label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-
                                 <div className="mt-6 flex gap-3">
                                     <button
                                         onClick={clearFilters}
@@ -502,8 +511,8 @@ export default function DiscoverPage() {
                 <div className="mt-8 flex gap-6">
                     <aside
                         className={`shrink-0 overflow-hidden rounded-2xl border border-white/8 bg-white/8 backdrop-blur-md transition-all duration-300 ${showFilters
-                                ? "w-[280px] p-5 opacity-100"
-                                : "w-0 border-transparent p-0 opacity-0"
+                            ? "w-[280px] p-5 opacity-100"
+                            : "w-0 border-transparent p-0 opacity-0"
                             }`}
                     >
                         {showFilters && (

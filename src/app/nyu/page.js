@@ -7,6 +7,7 @@ import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
 import Stars from "../../components/Stars";
 import { useAuth } from "../../context/AuthContext";
+import { getFavorites, addFavorite, removeFavorite, ensureProfile } from "@/lib/favorites";
 import { getSpaces } from "@/lib/spaces";
 import {
     House,
@@ -49,7 +50,14 @@ function mapSpace(s) {
     };
 }
 
-function Section({ title, subtitle, icon, spaces }) {
+function Section({
+    title,
+    subtitle,
+    icon,
+    spaces,
+    favoriteIds = [],
+    onToggleFavorite,
+}) {
     return (
         <section className="mt-10">
             <div className="mb-4 flex items-center gap-3">
@@ -70,7 +78,15 @@ function Section({ title, subtitle, icon, spaces }) {
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {spaces.map((space) => (
                         <Link key={space.id} href={`/stores/${space.id}`} className="block">
-                            <SpaceCard {...space} />
+                            <SpaceCard
+                                {...space}
+                                isFavorited={favoriteIds.includes(space.id)}
+                                onToggleFavorite={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onToggleFavorite?.(space.id);
+                                }}
+                            />
                         </Link>
                     ))}
                 </div>
@@ -88,6 +104,7 @@ export default function NYUPage() {
     const [allSpaces, setAllSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [favoriteIds, setFavoriteIds] = useState([]);
 
     useEffect(() => {
         async function fetchSpaces() {
@@ -103,6 +120,14 @@ export default function NYUPage() {
                 const data = await getSpaces();
                 const mapped = Array.isArray(data) ? data.map(mapSpace) : [];
                 setAllSpaces(mapped);
+
+                if (user?.id) {
+                    const favorites = await getFavorites(user.id);
+                    const ids = Array.isArray(favorites)
+                        ? favorites.map((f) => f.space_id)
+                        : [];
+                    setFavoriteIds(ids);
+                }
             } catch (err) {
                 console.error(err);
                 setError("Could not load NYU spaces.");
@@ -112,7 +137,35 @@ export default function NYUPage() {
         }
 
         fetchSpaces();
-    }, [isSignedIn, isNYU]);
+    }, [isSignedIn, isNYU, user]);
+
+    async function toggleFavorite(spaceId) {
+        try {
+            if (!user?.id) {
+                alert("Please sign in first.");
+                return;
+            }
+
+            if (favoriteIds.includes(spaceId)) {
+                await removeFavorite(user.id, spaceId);
+                setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
+            } else {
+                try {
+                    await addFavorite(user.id, spaceId);
+                } catch (err) {
+                    if (err.message && err.message.includes("23503")) {
+                        await ensureProfile(user);
+                        await addFavorite(user.id, spaceId);
+                    } else {
+                        throw err;
+                    }
+                }
+                setFavoriteIds((prev) => [...prev, spaceId]);
+            }
+        } catch (err) {
+            console.error("Favorite toggle failed:", err);
+        }
+    }
 
     const { studentFavorites, nearCampus, onCampus, discountSpots } = useMemo(() => {
         const studentFavorites = allSpaces.filter(
@@ -261,6 +314,8 @@ export default function NYUPage() {
                                     subtitle="Most loved by NYU students"
                                     icon={<Users size={18} />}
                                     spaces={studentFavorites}
+                                    favoriteIds={favoriteIds}
+                                    onToggleFavorite={toggleFavorite}
                                 />
 
                                 <Section
@@ -268,6 +323,8 @@ export default function NYUPage() {
                                     subtitle="Easy stops between classes"
                                     icon={<MapPin size={18} />}
                                     spaces={nearCampus}
+                                    favoriteIds={favoriteIds}
+                                    onToggleFavorite={toggleFavorite}
                                 />
 
                                 <Section
@@ -275,6 +332,8 @@ export default function NYUPage() {
                                     subtitle="Reliable campus study spaces"
                                     icon={<Sparkles size={18} />}
                                     spaces={onCampus}
+                                    favoriteIds={favoriteIds}
+                                    onToggleFavorite={toggleFavorite}
                                 />
 
                                 <Section
@@ -282,6 +341,8 @@ export default function NYUPage() {
                                     subtitle="Places with student-friendly perks"
                                     icon={<Tag size={18} />}
                                     spaces={discountSpots}
+                                    favoriteIds={favoriteIds}
+                                    onToggleFavorite={toggleFavorite}
                                 />
                             </>
                         )}

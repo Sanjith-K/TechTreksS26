@@ -70,6 +70,24 @@ export default function StorePage() {
                 const data = await getSpaceById(id);
                 setSpace(data);
 
+                if (data?.google_place_id) {
+                    const existing = JSON.parse(localStorage.getItem("recentSpaces") || "[]");
+
+                    const newItem = {
+                        id: data.google_place_id,
+                        name: data.name,
+                        address: data.address || "",
+                        price_range: data.price_range,
+                        vibe: data.vibe || data.noise_level || "—",
+                        tags: data.tags || [],
+                    };
+
+                    const filtered = existing.filter((item) => item.id !== newItem.id);
+                    const updated = [newItem, ...filtered].slice(0, 10);
+
+                    localStorage.setItem("recentSpaces", JSON.stringify(updated));
+                }
+
                 const user =
                     typeof window !== "undefined"
                         ? JSON.parse(localStorage.getItem("user"))
@@ -148,13 +166,11 @@ export default function StorePage() {
 
     return (
         <main className="relative min-h-screen overflow-hidden bg-[#07152b] pb-28 text-white">
-            {/* Background */}
             <div className="pointer-events-none absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,_#071224,_#0a1830,_#071224)]" />
                 <div className="absolute left-1/2 top-1/2 h-[1000px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,_rgba(34,211,238,0.14),_rgba(59,130,246,0.07),_transparent_68%)] blur-2xl" />
             </div>
 
-            {/* Stars */}
             <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                 {[...Array(60)].map((_, i) => {
                     const size = Math.random() * 2 + 1;
@@ -178,9 +194,7 @@ export default function StorePage() {
                 })}
             </div>
 
-            {/* Content */}
             <div className="relative z-10 mx-auto max-w-5xl px-6 pb-24 pt-4">
-                {/* Top bar */}
                 <div className="flex items-center justify-between text-white/85">
                     <Link
                         href="/discover"
@@ -197,7 +211,6 @@ export default function StorePage() {
                     </div>
                 </div>
 
-                {/* Hero image placeholder */}
                 <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/8 bg-white/8">
                     <div className="flex h-[260px] items-center justify-center bg-gradient-to-br from-slate-500/30 to-slate-700/20 text-white/35">
                         <div className="flex flex-col items-center gap-2">
@@ -207,7 +220,6 @@ export default function StorePage() {
                     </div>
                 </div>
 
-                {/* Main info card */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -256,7 +268,6 @@ export default function StorePage() {
                     </div>
                 </section>
 
-                {/* Pricing */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
                         <div className="rounded-full bg-blue-500/20 p-2 text-blue-300">
@@ -285,7 +296,6 @@ export default function StorePage() {
                     )}
                 </section>
 
-                {/* Photos */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
                         <div className="rounded-full bg-pink-500/20 p-2 text-pink-300">
@@ -309,7 +319,6 @@ export default function StorePage() {
                     </div>
                 </section>
 
-                {/* Vibe */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
                         <div className="rounded-full bg-orange-500/20 p-2 text-orange-300">
@@ -341,7 +350,6 @@ export default function StorePage() {
                     </div>
                 </section>
 
-                {/* About */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <h2 className="text-xl font-semibold">About</h2>
                     <p className="mt-4 text-white/75">
@@ -349,7 +357,6 @@ export default function StorePage() {
                     </p>
                 </section>
 
-                {/* Details */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <h2 className="text-xl font-semibold">Details</h2>
 
@@ -385,7 +392,6 @@ export default function StorePage() {
                     </div>
                 </section>
 
-                {/* Features */}
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <h2 className="text-xl font-semibold">Features</h2>
 
@@ -401,7 +407,6 @@ export default function StorePage() {
                     </div>
                 </section>
 
-                {/* Bottom buttons */}
                 <div className="mt-5 grid grid-cols-2 gap-4">
                     <button className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-white/85 hover:bg-white/10">
                         <Phone size={16} />
@@ -415,7 +420,6 @@ export default function StorePage() {
                 </div>
             </div>
 
-            {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">

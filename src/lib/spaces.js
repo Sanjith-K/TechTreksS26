@@ -19,6 +19,10 @@ export async function getSpaces(filters = {}) {
         params.append("laptop_friendly", filters.laptop_friendly);
     }
 
+    if (filters.price_range !== undefined && filters.price_range !== null) {
+        params.append("price_range", filters.price_range);
+    }
+
     const queryString = params.toString();
     const endpoint = queryString ? `/spaces/?${queryString}` : "/spaces/";
 
