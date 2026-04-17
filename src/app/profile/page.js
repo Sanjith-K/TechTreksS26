@@ -73,6 +73,57 @@ function mapRecent(space) {
     };
 }
 
+const SETTINGS_SECTIONS = [
+    {
+        id: "notifications",
+        title: "Notifications",
+        description: "Choose when Be1 space should reach you.",
+        icon: Bell,
+    },
+    {
+        id: "privacy",
+        title: "Privacy & Security",
+        description: "Control profile visibility and account safety.",
+        icon: Shield,
+    },
+    {
+        id: "preferences",
+        title: "Preferences",
+        description: "Set defaults for search and saved activity.",
+        icon: SlidersHorizontal,
+    },
+    {
+        id: "support",
+        title: "Help & Support",
+        description: "Get help, report a problem, or send feedback.",
+        icon: CircleHelp,
+    },
+];
+
+function ToggleRow({ label, description, checked, onChange }) {
+    return (
+        <button
+            type="button"
+            onClick={onChange}
+            className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/8 bg-white/5 p-4 text-left hover:bg-white/10"
+        >
+            <span>
+                <span className="block text-sm font-medium text-white">{label}</span>
+                <span className="mt-1 block text-xs text-white/45">{description}</span>
+            </span>
+            <span
+                className={`flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${checked ? "bg-fuchsia-600" : "bg-white/15"
+                    }`}
+            >
+                <span
+                    className={`h-4 w-4 rounded-full bg-white transition ${checked ? "translate-x-5" : "translate-x-0"
+                        }`}
+                />
+            </span>
+        </button>
+    );
+}
+
 export default function ProfilePage() {
     const { user, isSignedIn, setUser } = useAuth();
     const router = useRouter();
@@ -82,6 +133,15 @@ export default function ProfilePage() {
     const [recentSpaces, setRecentSpaces] = useState([]);
     const [favoritesLoading, setFavoritesLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("favorites");
+    const [activeSetting, setActiveSetting] = useState("notifications");
+    const [settings, setSettings] = useState({
+        emailUpdates: true,
+        favoriteAlerts: true,
+        privateProfile: false,
+        twoStepLogin: false,
+        saveRecent: true,
+        nyuFirst: true,
+    });
 
     const initial =
         user?.name?.[0]?.toUpperCase() ||
@@ -169,6 +229,120 @@ export default function ProfilePage() {
         setUser(null);
         router.push("/");
     }
+
+    function toggleSetting(key) {
+        setSettings((prev) => ({
+            ...prev,
+            [key]: !prev[key],
+        }));
+    }
+
+    function renderSettingContent() {
+        if (activeSetting === "notifications") {
+            return (
+                <div className="space-y-3">
+                    <ToggleRow
+                        label="Email updates"
+                        description="Receive important account and space updates by email."
+                        checked={settings.emailUpdates}
+                        onChange={() => toggleSetting("emailUpdates")}
+                    />
+                    <ToggleRow
+                        label="Favorite spot alerts"
+                        description="Get notified when saved spaces add discounts or update details."
+                        checked={settings.favoriteAlerts}
+                        onChange={() => toggleSetting("favoriteAlerts")}
+                    />
+                </div>
+            );
+        }
+
+        if (activeSetting === "privacy") {
+            return (
+                <div className="space-y-3">
+                    <ToggleRow
+                        label="Private profile"
+                        description="Hide your saved activity from other students."
+                        checked={settings.privateProfile}
+                        onChange={() => toggleSetting("privateProfile")}
+                    />
+                    <ToggleRow
+                        label="Two-step login"
+                        description="Add an extra check when signing in on a new device."
+                        checked={settings.twoStepLogin}
+                        onChange={() => toggleSetting("twoStepLogin")}
+                    />
+                    <Link
+                        href="/profile"
+                        className="block rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/80 hover:bg-white/10"
+                    >
+                        Review account information
+                    </Link>
+                </div>
+            );
+        }
+
+        if (activeSetting === "preferences") {
+            return (
+                <div className="space-y-3">
+                    <ToggleRow
+                        label="Save recent spaces"
+                        description="Keep recently viewed places on your profile."
+                        checked={settings.saveRecent}
+                        onChange={() => toggleSetting("saveRecent")}
+                    />
+                    <ToggleRow
+                        label="Show NYU-friendly spots first"
+                        description="Prioritize student discounts and nearby campus options."
+                        checked={settings.nyuFirst}
+                        onChange={() => toggleSetting("nyuFirst")}
+                    />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Link
+                            href="/discover"
+                            className="rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/80 hover:bg-white/10"
+                        >
+                            Open discovery filters
+                        </Link>
+                        <Link
+                            href="/map"
+                            className="rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/80 hover:bg-white/10"
+                        >
+                            Change map area
+                        </Link>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-3">
+                <Link
+                    href="/discover"
+                    className="block rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/80 hover:bg-white/10"
+                >
+                    Browse study spaces
+                </Link>
+                <a
+                    href="mailto:support@be1space.app"
+                    className="block rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/80 hover:bg-white/10"
+                >
+                    Contact support
+                </a>
+                <button
+                    type="button"
+                    onClick={() => alert("Thanks for the feedback!")}
+                    className="block w-full rounded-2xl border border-white/8 bg-white/5 p-4 text-left text-sm text-white/80 hover:bg-white/10"
+                >
+                    Send feedback
+                </button>
+            </div>
+        );
+    }
+
+    const selectedSetting =
+        SETTINGS_SECTIONS.find((section) => section.id === activeSetting) ||
+        SETTINGS_SECTIONS[0];
 
     return (
         <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
@@ -348,49 +522,61 @@ export default function ProfilePage() {
                         <section className="mt-8">
                             <h2 className="mb-4 text-2xl font-semibold">Settings</h2>
 
-                            <div className="space-y-3">
-                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <Bell size={18} className="text-white/70" />
-                                        <span>Notifications</span>
-                                    </div>
-                                    <span className="text-white/35">{">"}</span>
-                                </button>
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                                <div className="space-y-3">
+                                    {SETTINGS_SECTIONS.map((section) => {
+                                        const Icon = section.icon;
+                                        const isActive = activeSetting === section.id;
 
-                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <Shield size={18} className="text-white/70" />
-                                        <span>Privacy & Security</span>
-                                    </div>
-                                    <span className="text-white/35">{">"}</span>
-                                </button>
+                                        return (
+                                            <button
+                                                key={section.id}
+                                                type="button"
+                                                onClick={() => setActiveSetting(section.id)}
+                                                className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left backdrop-blur-md hover:bg-white/10 ${isActive
+                                                        ? "border-fuchsia-400/40 bg-fuchsia-500/15"
+                                                        : "border-white/8 bg-white/8"
+                                                    }`}
+                                                aria-expanded={isActive}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <Icon size={18} className={isActive ? "text-fuchsia-300" : "text-white/70"} />
+                                                    <div>
+                                                        <span className="block">{section.title}</span>
+                                                        <span className="mt-1 block text-xs text-white/45">
+                                                            {section.description}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className={isActive ? "text-fuchsia-200" : "text-white/35"}>
+                                                    {">"}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
 
-                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <SlidersHorizontal size={18} className="text-white/70" />
-                                        <span>Preferences</span>
-                                    </div>
-                                    <span className="text-white/35">{">"}</span>
-                                </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <LogOut size={18} />
+                                            <span>Log Out</span>
+                                        </div>
+                                        <span className="text-red-300/60">{">"}</span>
+                                    </button>
+                                </div>
 
-                                <button className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/8 p-4 text-left backdrop-blur-md hover:bg-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <CircleHelp size={18} className="text-white/70" />
-                                        <span>Help & Support</span>
+                                <div className="rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
+                                    <div className="mb-4">
+                                        <h3 className="text-xl font-semibold">{selectedSetting.title}</h3>
+                                        <p className="mt-1 text-sm text-white/50">
+                                            {selectedSetting.description}
+                                        </p>
                                     </div>
-                                    <span className="text-white/35">{">"}</span>
-                                </button>
 
-                                <button
-                                    onClick={handleLogout}
-                                    className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-left text-red-300 backdrop-blur-md hover:bg-red-500/10"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <LogOut size={18} />
-                                        <span>Log Out</span>
-                                    </div>
-                                    <span className="text-red-300/60">{">"}</span>
-                                </button>
+                                    {renderSettingContent()}
+                                </div>
                             </div>
                         </section>
 
