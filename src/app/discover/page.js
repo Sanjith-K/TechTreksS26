@@ -114,6 +114,7 @@ export default function DiscoverPage() {
     const [priceValue, setPriceValue] = useState(50);
     const [favoriteIds, setFavoriteIds] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [filters, setFilters] = useState({
         wifi: false,
@@ -126,6 +127,30 @@ export default function DiscoverPage() {
 
     const filteredSpaces = useMemo(() => {
         let result = allSpaces;
+        const searchTerms = searchQuery
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (searchTerms.length > 0) {
+            result = result.filter((s) => {
+                const searchableText = [
+                    s.name,
+                    s.address,
+                    s.type,
+                    s.vibe,
+                    s.noise_level,
+                    s.price,
+                    ...s.tags,
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+
+                return searchTerms.every((term) => searchableText.includes(term));
+            });
+        }
 
         if (activeCategory) {
             if (activeCategory === "coworking") {
@@ -149,7 +174,7 @@ export default function DiscoverPage() {
         if (filters.budget) result = result.filter((s) => s.price_range === 1);
 
         return result;
-    }, [allSpaces, activeCategory, filters]);
+    }, [allSpaces, searchQuery, activeCategory, filters]);
 
     async function loadSpaces(activeFilters = {}) {
         try {
@@ -257,6 +282,7 @@ export default function DiscoverPage() {
 
         setFilters(cleared);
         setActiveCategory(null);
+        setSearchQuery("");
         loadSpaces(cleared);
         setShowExtraPanel(false);
         setShowFilters(false);
@@ -304,6 +330,8 @@ export default function DiscoverPage() {
                 <div className="mt-6">
                     <input
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search cafes, libraries, spaces..."
                         className="w-full rounded-full border border-white/8 bg-white/8 px-5 py-4 text-lg text-white outline-none backdrop-blur-md placeholder:text-white/35"
                     />
