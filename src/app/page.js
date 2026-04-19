@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AuthButton from "../components/AuthButton";
 import { House, Map, GraduationCap, Heart, User } from "lucide-react";
 
 export default function HomePage() {
@@ -48,12 +49,7 @@ export default function HomePage() {
         </div>
 
         {/* Sign in */}
-        <Link
-          href="/signin"
-          className="rounded-full border border-white/30 px-4 py-2 text-sm text-white/85 hover:bg-white/10"
-        >
-          Sign in
-        </Link>
+        <AuthButton />
       </header>
 
       {/* HERO */}
@@ -77,39 +73,8 @@ export default function HomePage() {
             Discover the ideal study and work spaces tailored to your needs
           </p>
 
-          {/* Inputs */}
-          <div className="mx-auto mt-6 flex max-w-md flex-col gap-3">
-            <input
-              type="text"
-              placeholder="What are you looking for?"
-              className="w-full rounded-3xl border border-white/8 bg-white/8 px-5 py-3 text-base text-white backdrop-blur-md placeholder:text-white/35"
-            />
-
-            <input
-              type="text"
-              placeholder="Enter Location"
-              className="w-full rounded-3xl border border-white/8 bg-white/8 px-5 py-3 text-base text-white backdrop-blur-md placeholder:text-white/35"
-            />
-          </div>
-
-          {/* Filters */}
-          <div className="mx-auto mt-5 flex flex-wrap justify-center gap-2">
-            <button className="rounded-full border border-white/8 bg-white/8 px-3 py-1.5 text-xs text-white/70 hover:bg-white/12">
-              wifi
-            </button>
-            <button className="rounded-full border border-white/8 bg-white/8 px-3 py-1.5 text-xs text-white/70 hover:bg-white/12">
-              noise-level
-            </button>
-            <button className="rounded-full border border-white/8 bg-white/8 px-3 py-1.5 text-xs text-white/70 hover:bg-white/12">
-              laptop-free
-            </button>
-            <button className="rounded-full border border-white/8 bg-white/8 px-3 py-1.5 text-xs text-white/70 hover:bg-white/12">
-              price-range
-            </button>
-          </div>
-
           {/* BUTTON */}
-          <div className="mt-10 mb-6">
+          <div className="mt-7 mb-6">
             <Link
               href="/discover"
               className="inline-flex rounded-full bg-blue-600 px-7 py-3 text-base font-semibold shadow-[0_0_20px_rgba(37,99,235,0.35)] hover:scale-105 hover:bg-blue-700"

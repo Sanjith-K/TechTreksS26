@@ -16,8 +16,6 @@ import {
     Laptop,
     Bath,
     Music2,
-    Phone,
-    Navigation,
     DollarSign,
     Image as ImageIcon,
     House,
@@ -254,8 +252,8 @@ export default function StorePage() {
                                 onClick={handleToggleFavorite}
                                 disabled={favoriteLoading}
                                 className={`rounded-full p-2 transition ${isFavorited
-                                        ? "bg-pink-500/20 text-pink-300 shadow-[0_0_18px_rgba(244,114,182,0.28)]"
-                                        : "bg-white/10 text-white hover:bg-white/15"
+                                    ? "bg-pink-500/20 text-pink-300 shadow-[0_0_18px_rgba(244,114,182,0.28)]"
+                                    : "bg-white/10 text-white hover:bg-white/15"
                                     } ${favoriteLoading ? "opacity-60" : ""}`}
                             >
                                 <Heart size={16} className={isFavorited ? "fill-current" : ""} />
@@ -406,18 +404,6 @@ export default function StorePage() {
                         ))}
                     </div>
                 </section>
-
-                <div className="mt-5 grid grid-cols-2 gap-4">
-                    <button className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-white/85 hover:bg-white/10">
-                        <Phone size={16} />
-                        <span>Call</span>
-                    </button>
-
-                    <button className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-500 px-4 py-4 font-medium text-white hover:opacity-90">
-                        <Navigation size={16} />
-                        <span>Directions</span>
-                    </button>
-                </div>
             </div>
 
             <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">

@@ -126,7 +126,7 @@ export default function SignInPage() {
                             </button>
                         </div>
 
-                        <div className="mt-6 text-center text-sm text-white/55">
+                        <div className="mt-8 text-center text-sm text-white/55">
                             <p>
                                 Don’t have an account?{" "}
                                 <Link
@@ -138,23 +138,6 @@ export default function SignInPage() {
                             </p>
                         </div>
 
-                        <div className="mt-6">
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-white/10" />
-                                </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-[#13213a] px-3 text-white/45">or</span>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                className="mt-6 w-full rounded-full border border-white/10 bg-white/8 px-6 py-4 text-sm font-medium text-white/80 hover:bg-white/10"
-                            >
-                                Continue with Google
-                            </button>
-                        </div>
                     </form>
                 </div>
             </div>
