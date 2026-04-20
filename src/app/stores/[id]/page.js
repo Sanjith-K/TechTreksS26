@@ -302,31 +302,6 @@ export default function StorePage() {
                     )}
                 </section>
 
-<<<<<<< HEAD
-=======
-                <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
-                    <div className="flex items-center gap-2 text-white">
-                        <div className="rounded-full bg-pink-500/20 p-2 text-pink-300">
-                            <ImageIcon size={16} />
-                        </div>
-                        <h2 className="text-xl font-semibold">Photos</h2>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                        {[1, 2, 3, 4].map((item) => (
-                            <div
-                                key={item}
-                                className="flex h-44 items-center justify-center rounded-2xl border border-white/8 bg-white/8 text-white/35"
-                            >
-                                <div className="flex flex-col items-center gap-2">
-                                    <ImageIcon size={28} />
-                                    <span className="text-xs">Photo {item}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
->>>>>>> eb5b3d7a89a2b48ef898ce8b8c6070fc93ce245a
 
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
