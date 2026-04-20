@@ -23,11 +23,9 @@ export default function SpaceCard({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                    {favoriteCount > 0 && (
-                        <div className="rounded-full bg-pink-500/15 px-3 py-1 text-sm text-pink-300">
-                            ♥ {favoriteCount}
-                        </div>
-                    )}
+                    <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/85">
+                        ⭐ {favoriteCount != null ? favoriteCount : "—"}
+                    </div>
 
                     <button
                         type="button"

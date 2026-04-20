@@ -61,6 +61,7 @@ function Section({
     loading,
     hide,
     favoriteIds = [],
+    favoriteCounts = {},
     onToggleFavorite,
 }) {
     if (hide) return null;
@@ -86,11 +87,11 @@ function Section({
                             <SpaceCard
                                 name={space.name}
                                 address={space.address}
-                                rating={space.rating}
                                 price={space.price}
                                 vibe={space.vibe}
                                 distance={space.distance}
                                 tags={space.tags}
+                                favoriteCount={favoriteCounts[space.id] ?? 0}
                                 isFavorited={favoriteIds.includes(space.id)}
                                 onToggleFavorite={(e) => {
                                     e.preventDefault();
@@ -110,6 +111,7 @@ export default function DiscoverPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
     const [allSpaces, setAllSpaces] = useState([]);
+    const [favoriteCounts, setFavoriteCounts] = useState({});
     const [loading, setLoading] = useState(true);
     const [priceValue, setPriceValue] = useState(50);
     const [favoriteIds, setFavoriteIds] = useState([]);
@@ -188,8 +190,18 @@ export default function DiscoverPage() {
             if (activeFilters.nyu_discount) backendFilters.nyu_discount = true;
             if (activeFilters.price_range) backendFilters.price_range = activeFilters.price_range;
 
-            const data = await getSpaces(backendFilters);
+            const [data, popularData] = await Promise.all([
+                getSpaces(backendFilters),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/popular?limit=100`)
+                    .then((r) => r.json())
+                    .catch(() => []),
+            ]);
             setAllSpaces(Array.isArray(data) ? data.map(mapSpace) : []);
+            const counts = {};
+            if (Array.isArray(popularData)) {
+                popularData.forEach((s) => { counts[s.google_place_id] = s.favorite_count; });
+            }
+            setFavoriteCounts(counts);
         } catch (err) {
             console.error("Failed to fetch spaces:", err);
         } finally {
@@ -703,6 +715,7 @@ export default function DiscoverPage() {
                             spaces={filteredSpaces}
                             loading={loading}
                             favoriteIds={favoriteIds}
+                            favoriteCounts={favoriteCounts}
                             onToggleFavorite={toggleFavorite}
                         />
                         <Section title="Popular This Week" spaces={[]} loading={false} hide />
@@ -711,6 +724,7 @@ export default function DiscoverPage() {
                             spaces={filteredSpaces.filter((s) => s.nyu_discount)}
                             loading={loading}
                             favoriteIds={favoriteIds}
+                            favoriteCounts={favoriteCounts}
                             onToggleFavorite={toggleFavorite}
                         />
                     </div>
