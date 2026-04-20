@@ -28,6 +28,30 @@ def get_spaces(
     return response.data
 
 
+@router.get("/popular")
+def get_popular_spaces(limit: int = 10):
+    """Return spaces sorted by how many times they've been favorited."""
+    fav_res = supabase.table("favorites").select("space_id").execute()
+    counts: dict = {}
+    for row in (fav_res.data or []):
+        sid = row["space_id"]
+        counts[sid] = counts.get(sid, 0) + 1
+
+    if not counts:
+        return []
+
+    top_ids = sorted(counts, key=lambda k: counts[k], reverse=True)[:limit]
+
+    spaces_res = supabase.table("Spaces").select("*").in_("google_place_id", top_ids).execute()
+    spaces = spaces_res.data or []
+
+    for space in spaces:
+        space["favorite_count"] = counts.get(space["google_place_id"], 0)
+
+    spaces.sort(key=lambda s: s["favorite_count"], reverse=True)
+    return spaces
+
+
 @router.get("/map")
 def get_spaces_for_map():
     response = supabase.table("Spaces") \

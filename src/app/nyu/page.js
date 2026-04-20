@@ -80,6 +80,7 @@ function Section({
                         <Link key={space.id} href={`/stores/${space.id}`} className="block">
                             <SpaceCard
                                 {...space}
+                                favoriteCount={space.favoriteCount}
                                 isFavorited={favoriteIds.includes(space.id)}
                                 onToggleFavorite={(e) => {
                                     e.preventDefault();
@@ -102,6 +103,7 @@ export default function NYUPage() {
     const backTo = searchParams.get("from") || "/discover";
 
     const [allSpaces, setAllSpaces] = useState([]);
+    const [popularSpaces, setPopularSpaces] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [favoriteIds, setFavoriteIds] = useState([]);
@@ -117,9 +119,20 @@ export default function NYUPage() {
                 setLoading(true);
                 setError("");
 
-                const data = await getSpaces();
+                const [data, popularData] = await Promise.all([
+                    getSpaces(),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/popular?limit=3`)
+                        .then((r) => r.json())
+                        .catch(() => []),
+                ]);
+
                 const mapped = Array.isArray(data) ? data.map(mapSpace) : [];
                 setAllSpaces(mapped);
+
+                const mappedPopular = Array.isArray(popularData)
+                    ? popularData.map((s) => ({ ...mapSpace(s), favoriteCount: s.favorite_count }))
+                    : [];
+                setPopularSpaces(mappedPopular);
 
                 if (user?.id) {
                     const favorites = await getFavorites(user.id);
@@ -167,16 +180,7 @@ export default function NYUPage() {
         }
     }
 
-    const { studentFavorites, nearCampus, onCampus, discountSpots } = useMemo(() => {
-        const studentFavorites = allSpaces.filter(
-            (space) =>
-                space.tags.some((tag) =>
-                    ["deep focus", "late night", "group work", "study session", "campus spot"].includes(
-                        tag.toLowerCase()
-                    )
-                )
-        );
-
+    const { nearCampus, onCampus, discountSpots } = useMemo(() => {
         const nearCampus = allSpaces.filter(
             (space) =>
                 typeof space.address === "string" &&
@@ -201,12 +205,7 @@ export default function NYUPage() {
 
         const discountSpots = allSpaces.filter((space) => space.nyu_discount);
 
-        return {
-            studentFavorites,
-            nearCampus,
-            onCampus,
-            discountSpots,
-        };
+        return { nearCampus, onCampus, discountSpots };
     }, [allSpaces]);
 
     return (
@@ -311,9 +310,9 @@ export default function NYUPage() {
                             <>
                                 <Section
                                     title="Student Favorites"
-                                    subtitle="Most loved by NYU students"
+                                    subtitle="Most favorited by NYU students"
                                     icon={<Users size={18} />}
-                                    spaces={studentFavorites}
+                                    spaces={popularSpaces}
                                     favoriteIds={favoriteIds}
                                     onToggleFavorite={toggleFavorite}
                                 />

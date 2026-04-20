@@ -12,6 +12,7 @@ export default function SpaceCard({
     tags = [],
     isFavorited = false,
     onToggleFavorite,
+    favoriteCount,
 }) {
     return (
         <div className="rounded-2xl border border-white/8 bg-white/8 p-4 backdrop-blur-md transition duration-200 hover:scale-[1.01] hover:border-cyan-400/20 hover:bg-white/10">
@@ -22,9 +23,11 @@ export default function SpaceCard({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                    <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/85">
-                        ⭐ {rating}
-                    </div>
+                    {favoriteCount > 0 && (
+                        <div className="rounded-full bg-pink-500/15 px-3 py-1 text-sm text-pink-300">
+                            ♥ {favoriteCount}
+                        </div>
+                    )}
 
                     <button
                         type="button"
