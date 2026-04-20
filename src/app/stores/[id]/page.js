@@ -56,6 +56,7 @@ export default function StorePage() {
     const [space, setSpace] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [favoriteCount, setFavoriteCount] = useState(0);
     const [isFavorited, setIsFavorited] = useState(false);
     const [favoriteLoading, setFavoriteLoading] = useState(false);
 
@@ -67,6 +68,7 @@ export default function StorePage() {
 
                 const data = await getSpaceById(id);
                 setSpace(data);
+                setFavoriteCount(data.favorite_count ?? 0);
 
                 if (data?.google_place_id) {
                     const existing = JSON.parse(localStorage.getItem("recentSpaces") || "[]");
@@ -78,6 +80,7 @@ export default function StorePage() {
                         price_range: data.price_range,
                         vibe: data.vibe || data.noise_level || "—",
                         tags: data.tags || [],
+                        favoriteCount: data.favorite_count ?? 0,
                     };
 
                     const filtered = existing.filter((item) => item.id !== newItem.id);
@@ -93,8 +96,10 @@ export default function StorePage() {
 
                 if (user?.id) {
                     const favorites = await getFavorites(user.id);
+                    const currentSpaceId = data.google_place_id || id;
+
                     const alreadyFavorited = Array.isArray(favorites)
-                        ? favorites.some((item) => item.space_id === id)
+                        ? favorites.some((item) => item.space_id === currentSpaceId)
                         : false;
 
                     setIsFavorited(alreadyFavorited);
@@ -126,12 +131,16 @@ export default function StorePage() {
 
             setFavoriteLoading(true);
 
+            const currentSpaceId = space?.google_place_id || id;
+
             if (isFavorited) {
-                await removeFavorite(user.id, id);
+                await removeFavorite(user.id, currentSpaceId);
                 setIsFavorited(false);
+                setFavoriteCount((prev) => Math.max(prev - 1, 0));
             } else {
-                await addFavorite(user.id, id);
+                await addFavorite(user.id, currentSpaceId);
                 setIsFavorited(true);
+                setFavoriteCount((prev) => prev + 1);
             }
         } catch (err) {
             console.error("Favorite update failed:", err);
@@ -255,6 +264,10 @@ export default function StorePage() {
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <div className="rounded-full bg-white/10 px-3 py-1 text-sm text-white/85">
+                                ⭐ {favoriteCount}
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={handleToggleFavorite}

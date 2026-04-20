@@ -57,6 +57,7 @@ function mapFavorite(item) {
         vibe: s.vibe || s.noise_level || "—",
         distance: "—",
         tags: parseTags(s.tags),
+        favoriteCount: s.favorite_count ?? 0,
     };
 }
 
@@ -70,6 +71,7 @@ function mapRecent(space) {
         vibe: space.vibe || "—",
         distance: "—",
         tags: parseTags(space.tags),
+        favoriteCount: space.favoriteCount ?? 0,
     };
 }
 
@@ -164,6 +166,20 @@ export default function ProfilePage() {
                 if (Array.isArray(data)) {
                     setFavoriteSpaces(data.map(mapFavorite));
                     setFavoriteIds(data.map((item) => item.space_id));
+
+                    const countMap = {};
+                    data.forEach((item) => {
+                        const sid = item?.Spaces?.google_place_id;
+                        const count = item?.Spaces?.favorite_count ?? 0;
+                        if (sid) countMap[sid] = count;
+                    });
+
+                    setRecentSpaces((prev) =>
+                        prev.map((space) => ({
+                            ...space,
+                            favoriteCount: countMap[space.id] ?? space.favoriteCount ?? 0,
+                        }))
+                    );
                 } else {
                     setFavoriteSpaces([]);
                     setFavoriteIds([]);
@@ -192,11 +208,29 @@ export default function ProfilePage() {
                 return;
             }
 
-            if (favoriteIds.includes(spaceId)) {
+            const wasFavorited = favoriteIds.includes(spaceId);
+
+            if (wasFavorited) {
                 await removeFavorite(user.id, spaceId);
 
                 setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
-                setFavoriteSpaces((prev) => prev.filter((space) => space.id !== spaceId));
+                setFavoriteSpaces((prev) =>
+                    prev
+                        .filter((space) => space.id !== spaceId)
+                        .map((space) =>
+                            space.id === spaceId
+                                ? { ...space, favoriteCount: Math.max((space.favoriteCount ?? 0) - 1, 0) }
+                                : space
+                        )
+                );
+
+                setRecentSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: Math.max((space.favoriteCount ?? 0) - 1, 0) }
+                            : space
+                    )
+                );
             } else {
                 try {
                     await addFavorite(user.id, spaceId);
@@ -212,12 +246,31 @@ export default function ProfilePage() {
                 setFavoriteIds((prev) => [...prev, spaceId]);
 
                 const recentMatch = recentSpaces.find((space) => space.id === spaceId);
+
                 if (recentMatch) {
                     setFavoriteSpaces((prev) => {
-                        if (prev.some((space) => space.id === spaceId)) return prev;
-                        return [recentMatch, ...prev];
+                        if (prev.some((space) => space.id === spaceId)) {
+                            return prev.map((space) =>
+                                space.id === spaceId
+                                    ? { ...space, favoriteCount: (space.favoriteCount ?? 0) + 1 }
+                                    : space
+                            );
+                        }
+
+                        return [
+                            { ...recentMatch, favoriteCount: (recentMatch.favoriteCount ?? 0) + 1 },
+                            ...prev,
+                        ];
                     });
                 }
+
+                setRecentSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: (space.favoriteCount ?? 0) + 1 }
+                            : space
+                    )
+                );
             }
         } catch (err) {
             console.error("Favorite toggle failed:", err);
@@ -452,8 +505,8 @@ export default function ProfilePage() {
                                 <button
                                     onClick={() => setActiveTab("favorites")}
                                     className={`rounded-full px-4 py-2 text-sm ${activeTab === "favorites"
-                                            ? "bg-fuchsia-600 text-white"
-                                            : "border border-white/10 bg-white/8 text-white/70"
+                                        ? "bg-fuchsia-600 text-white"
+                                        : "border border-white/10 bg-white/8 text-white/70"
                                         }`}
                                 >
                                     Favorites
@@ -462,8 +515,8 @@ export default function ProfilePage() {
                                 <button
                                     onClick={() => setActiveTab("recent")}
                                     className={`rounded-full px-4 py-2 text-sm ${activeTab === "recent"
-                                            ? "bg-fuchsia-600 text-white"
-                                            : "border border-white/10 bg-white/8 text-white/70"
+                                        ? "bg-fuchsia-600 text-white"
+                                        : "border border-white/10 bg-white/8 text-white/70"
                                         }`}
                                 >
                                     Recent
@@ -485,6 +538,7 @@ export default function ProfilePage() {
                                             <Link key={space.id} href={`/stores/${space.id}`} className="block">
                                                 <SpaceCard
                                                     {...space}
+                                                    favoriteCount={space.favoriteCount}
                                                     isFavorited={favoriteIds.includes(space.id)}
                                                     onToggleFavorite={(e) => {
                                                         e.preventDefault();
@@ -506,6 +560,7 @@ export default function ProfilePage() {
                                         <Link key={space.id} href={`/stores/${space.id}`} className="block">
                                             <SpaceCard
                                                 {...space}
+                                                favoriteCount={space.favoriteCount}
                                                 isFavorited={favoriteIds.includes(space.id)}
                                                 onToggleFavorite={(e) => {
                                                     e.preventDefault();
@@ -534,8 +589,8 @@ export default function ProfilePage() {
                                                 type="button"
                                                 onClick={() => setActiveSetting(section.id)}
                                                 className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left backdrop-blur-md hover:bg-white/10 ${isActive
-                                                        ? "border-fuchsia-400/40 bg-fuchsia-500/15"
-                                                        : "border-white/8 bg-white/8"
+                                                    ? "border-fuchsia-400/40 bg-fuchsia-500/15"
+                                                    : "border-white/8 bg-white/8"
                                                     }`}
                                                 aria-expanded={isActive}
                                             >

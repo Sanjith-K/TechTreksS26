@@ -45,6 +45,7 @@ function mapFavorite(item) {
         vibe: s.vibe || s.noise_level || "—",
         distance: "—",
         tags: parseTags(s.tags),
+        favoriteCount: s.favorite_count ?? 0,
     };
 }
 
@@ -158,6 +159,7 @@ export default function FavoritesPage() {
                             <Link key={space.id} href={`/stores/${space.id}`} className="block">
                                 <SpaceCard
                                     {...space}
+                                    favoriteCount={space.favoriteCount}
                                     isFavorited={true}
                                     onToggleFavorite={(e) => {
                                         e.preventDefault();

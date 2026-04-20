@@ -108,7 +108,6 @@ function Section({
 }
 
 export default function DiscoverPage() {
-    const [showFilters, setShowFilters] = useState(false);
     const [showExtraPanel, setShowExtraPanel] = useState(false);
     const [allSpaces, setAllSpaces] = useState([]);
     const [favoriteCounts, setFavoriteCounts] = useState({});
@@ -221,28 +220,38 @@ export default function DiscoverPage() {
                 return;
             }
 
-            if (favoriteIds.includes(spaceId)) {
+            const wasFavorited = favoriteIds.includes(spaceId);
+
+            if (wasFavorited) {
                 await removeFavorite(user.id, spaceId);
+
                 setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
+                setFavoriteCounts((prev) => ({
+                    ...prev,
+                    [spaceId]: Math.max((prev[spaceId] ?? 0) - 1, 0),
+                }));
             } else {
                 try {
                     await addFavorite(user.id, spaceId);
                 } catch (err) {
                     if (err.message && err.message.includes("23503")) {
-                        // Profile row missing — create it using localStorage data then retry
                         await ensureProfile(user);
                         await addFavorite(user.id, spaceId);
                     } else {
                         throw err;
                     }
                 }
+
                 setFavoriteIds((prev) => [...prev, spaceId]);
+                setFavoriteCounts((prev) => ({
+                    ...prev,
+                    [spaceId]: (prev[spaceId] ?? 0) + 1,
+                }));
             }
         } catch (err) {
             console.error("Favorite toggle failed:", err);
         }
     }
-
     useEffect(() => {
         async function init() {
             await loadSpaces();
@@ -297,13 +306,11 @@ export default function DiscoverPage() {
         setSearchQuery("");
         loadSpaces(cleared);
         setShowExtraPanel(false);
-        setShowFilters(false);
     }
 
     function applyFilters() {
         loadSpaces(filters);
         setShowExtraPanel(false);
-        setShowFilters(false);
     }
 
     return (
@@ -330,7 +337,7 @@ export default function DiscoverPage() {
                         <AuthButton />
 
                         <button
-                            onClick={() => setShowFilters(!showFilters)}
+                            onClick={() => setShowExtraPanel(true)}
                             className="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
                         >
                             <SlidersHorizontal size={16} />
@@ -425,13 +432,6 @@ export default function DiscoverPage() {
                                 }`}
                         >
                             Laptop OK
-                        </button>
-
-                        <button
-                            onClick={() => setShowExtraPanel(true)}
-                            className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/80 hover:bg-white/12"
-                        >
-                            etc.
                         </button>
                     </div>
 
@@ -548,168 +548,8 @@ export default function DiscoverPage() {
                     )}
                 </div>
 
-                <div className="mt-8 flex gap-6">
-                    <aside
-                        className={`shrink-0 overflow-hidden rounded-2xl border border-white/8 bg-white/8 backdrop-blur-md transition-all duration-300 ${showFilters
-                            ? "w-[280px] p-5 opacity-100"
-                            : "w-0 border-transparent p-0 opacity-0"
-                            }`}
-                    >
-                        {showFilters && (
-                            <>
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-2xl font-semibold">Filters</h2>
-                                    <button
-                                        onClick={() => setShowFilters(false)}
-                                        className="text-white/60 hover:text-white"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <div className="mt-6">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium text-white/85">Price Range</h3>
-                                        <span className="rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
-                                            ${priceValue}
-                                        </span>
-                                    </div>
-
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={priceValue}
-                                        onChange={(e) => setPriceValue(e.target.value)}
-                                        className="mt-4 w-full accent-blue-500"
-                                    />
-
-                                    <div className="mt-2 flex justify-between text-sm text-white/60">
-                                        <span>$0</span>
-                                        <span>${priceValue}</span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6">
-                                    <h3 className="text-lg font-medium text-white/85">Vibe</h3>
-                                    <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.noise_level === "quiet"}
-                                                onChange={() => setNoiseFilter("quiet")}
-                                            />
-                                            Quiet
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.noise_level === "moderate"}
-                                                onChange={() => setNoiseFilter("moderate")}
-                                            />
-                                            Moderate
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.noise_level === "lively"}
-                                                onChange={() => setNoiseFilter("lively")}
-                                            />
-                                            Lively
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6">
-                                    <h3 className="text-lg font-medium text-white/85">Amenities</h3>
-                                    <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.wifi}
-                                                onChange={() => toggleBooleanFilter("wifi")}
-                                            />
-                                            WiFi
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.laptop_friendly}
-                                                onChange={() => toggleBooleanFilter("laptop_friendly")}
-                                            />
-                                            Laptop OK
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Power Outlets
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Food & Drinks
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Open Late
-                                        </label>
-
-                                        <label className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.nyu_discount}
-                                                onChange={() => toggleBooleanFilter("nyu_discount")}
-                                            />
-                                            NYU Discount
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6">
-                                    <h3 className="text-lg font-medium text-white/85">Distance</h3>
-                                    <div className="mt-3 space-y-3 text-white/80">
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 0.5 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 1 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 2 mi
-                                        </label>
-                                        <label className="flex items-center gap-3">
-                                            <input type="checkbox" />
-                                            Within 5 mi
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="mt-8 flex gap-2">
-                                    <button
-                                        onClick={clearFilters}
-                                        className="w-1/2 rounded-full border border-white/10 px-4 py-3 font-medium text-white/70 hover:bg-white/5"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        onClick={applyFilters}
-                                        className="w-1/2 rounded-full bg-blue-600 px-4 py-3 font-medium hover:bg-blue-700"
-                                    >
-                                        Apply Filters
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </aside>
-
-                    <div className="min-w-0 flex-1">
+                <div className="mt-8">
+                    <div className="min-w-0">
                         <Section
                             title="Featured Spots"
                             spaces={filteredSpaces}

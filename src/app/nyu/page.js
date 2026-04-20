@@ -46,6 +46,7 @@ function mapSpace(s) {
         distance: s.distance || "—",
         tags,
         nyu_discount: !!s.nyu_discount,
+        favoriteCount: s.favorite_count ?? 0,
         raw: s,
     };
 }
@@ -159,9 +160,26 @@ export default function NYUPage() {
                 return;
             }
 
-            if (favoriteIds.includes(spaceId)) {
+            const wasFavorited = favoriteIds.includes(spaceId);
+
+            if (wasFavorited) {
                 await removeFavorite(user.id, spaceId);
+
                 setFavoriteIds((prev) => prev.filter((id) => id !== spaceId));
+                setAllSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: Math.max((space.favoriteCount ?? 0) - 1, 0) }
+                            : space
+                    )
+                );
+                setPopularSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: Math.max((space.favoriteCount ?? 0) - 1, 0) }
+                            : space
+                    )
+                );
             } else {
                 try {
                     await addFavorite(user.id, spaceId);
@@ -173,7 +191,22 @@ export default function NYUPage() {
                         throw err;
                     }
                 }
+
                 setFavoriteIds((prev) => [...prev, spaceId]);
+                setAllSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: (space.favoriteCount ?? 0) + 1 }
+                            : space
+                    )
+                );
+                setPopularSpaces((prev) =>
+                    prev.map((space) =>
+                        space.id === spaceId
+                            ? { ...space, favoriteCount: (space.favoriteCount ?? 0) + 1 }
+                            : space
+                    )
+                );
             }
         } catch (err) {
             console.error("Favorite toggle failed:", err);
