@@ -128,10 +128,10 @@ export default function MapPage() {
             <div className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-8 pb-28 pt-6">
                 {/* Header */}
                 <header className="flex items-center justify-between">
-                    <div className="flex items-end gap-1">
+                    <Link href="/" className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">Be1</h1>
                         <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">space</span>
-                    </div>
+                    </Link>
                     <AuthButton />
                 </header>
 
@@ -369,7 +369,7 @@ export default function MapPage() {
             </div>
 
             {/* Bottom Nav */}
-            <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+            <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
                 <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
                     <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
                         <House size={20} /><span>discover</span>

@@ -255,14 +255,14 @@ function NYUPage() {
             <div className="relative z-10 mx-auto w-full max-w-7xl px-8 pb-36 pt-6">
                 {/* Header */}
                 <header className="flex items-center justify-between">
-                    <div className="flex items-end gap-1">
+                    <Link href="/" className="flex items-end gap-1">
                         <h1 className="font-[Be1Logo5] text-5xl tracking-wide sm:text-6xl">
                             Be1
                         </h1>
                         <span className="font-[Be1Logo5] text-2xl tracking-wide text-white/70 sm:text-3xl">
                             space
                         </span>
-                    </div>
+                    </Link>
 
                     <AuthButton />
                 </header>
