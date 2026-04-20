@@ -43,12 +43,30 @@ def upsert_profile(body: dict):
 
 @router.get("/{user_id}/favorites")
 def get_favorites(user_id: str):
-    response = supabase.table("favorites") \
+    # Get user's favorites
+    fav_res = supabase.table("favorites") \
         .select("*, Spaces(*)") \
         .eq("user_id", user_id) \
         .execute()
-    return response.data
 
+    favorites = fav_res.data or []
+
+    # Get ALL favorites to compute counts
+    all_favs = supabase.table("favorites").select("space_id").execute()
+
+    counts = {}
+    for row in (all_favs.data or []):
+        sid = row["space_id"]
+        counts[sid] = counts.get(sid, 0) + 1
+
+    # Attach favorite_count to each space
+    for fav in favorites:
+        space = fav.get("Spaces")
+        if space:
+            sid = space.get("google_place_id")
+            space["favorite_count"] = counts.get(sid, 0)
+
+    return favorites
 
 @router.post("/{user_id}/favorites")
 def add_favorite(user_id: str, body: dict):
