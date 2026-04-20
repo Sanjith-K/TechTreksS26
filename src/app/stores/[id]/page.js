@@ -210,12 +210,20 @@ export default function StorePage() {
                 </div>
 
                 <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/8 bg-white/8">
-                    <div className="flex h-[260px] items-center justify-center bg-gradient-to-br from-slate-500/30 to-slate-700/20 text-white/35">
-                        <div className="flex flex-col items-center gap-2">
-                            <ImageIcon size={42} />
-                            <span className="text-sm">Main photo placeholder</span>
+                    {space.image_url ? (
+                        <img
+                            src={space.image_url}
+                            alt={space.name}
+                            className="h-[260px] w-full object-cover"
+                        />
+                    ) : (
+                        <div className="flex h-[260px] items-center justify-center bg-gradient-to-br from-slate-500/30 to-slate-700/20 text-white/35">
+                            <div className="flex flex-col items-center gap-2">
+                                <ImageIcon size={42} />
+                                <span className="text-sm">No photo yet</span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
@@ -294,6 +302,8 @@ export default function StorePage() {
                     )}
                 </section>
 
+<<<<<<< HEAD
+=======
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
                         <div className="rounded-full bg-pink-500/20 p-2 text-pink-300">
@@ -316,6 +326,7 @@ export default function StorePage() {
                         ))}
                     </div>
                 </section>
+>>>>>>> eb5b3d7a89a2b48ef898ce8b8c6070fc93ce245a
 
                 <section className="mt-4 rounded-2xl border border-white/8 bg-white/8 p-5 backdrop-blur-md">
                     <div className="flex items-center gap-2 text-white">
