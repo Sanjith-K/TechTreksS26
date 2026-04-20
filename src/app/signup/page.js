@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Stars from "../../components/Stars";
 import { signup } from "@/lib/auth";
 
-export default function SignUpPage() {
+function SignUpPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -179,4 +179,8 @@ export default function SignUpPage() {
             </div>
         </main>
     );
+}
+
+export default function SignUpPageWrapper() {
+    return <Suspense><SignUpPage /></Suspense>;
 }

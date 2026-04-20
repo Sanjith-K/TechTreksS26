@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import AuthButton from "../../components/AuthButton";
 import SpaceCard from "../../components/SpaceCard";
@@ -97,7 +97,7 @@ function Section({
     );
 }
 
-export default function NYUPage() {
+function NYUPage() {
     const { user, isSignedIn, isNYU } = useAuth();
     const searchParams = useSearchParams();
 
@@ -413,4 +413,8 @@ export default function NYUPage() {
             </nav>
         </main>
     );
+}
+
+export default function NYUPageWrapper() {
+    return <Suspense><NYUPage /></Suspense>;
 }
