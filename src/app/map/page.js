@@ -46,7 +46,7 @@ export default function MapPage() {
     useEffect(() => {
         async function loadSpaces() {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/map`);
+                const res = await fetch("/api/spaces/map");
                 if (!res.ok) return;
                 const data = await res.json();
                 setSpaces(Array.isArray(data) ? data : []);

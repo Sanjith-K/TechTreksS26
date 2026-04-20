@@ -1,7 +1,4 @@
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "https://be1space-production.up.railway.app";
-
-console.log("API_BASE_URL =", API_BASE_URL);
+const API_BASE_URL = "/api";
 
 async function handleResponse(response) {
     const contentType = response.headers.get("content-type");
@@ -32,18 +29,11 @@ export async function apiGet(endpoint) {
 }
 
 export async function apiPost(endpoint, body) {
-    console.log("API_BASE_URL =", API_BASE_URL);
-    console.log("endpoint =", endpoint);
-    console.log("full URL =", `${API_BASE_URL}${endpoint}`);
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });
-
     return handleResponse(response);
 }
 
@@ -51,6 +41,5 @@ export async function apiDelete(endpoint) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "DELETE",
     });
-
     return handleResponse(response);
 }

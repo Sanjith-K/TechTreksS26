@@ -122,7 +122,7 @@ function NYUPage() {
 
                 const [data, popularData] = await Promise.all([
                     getSpaces(),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/popular?limit=3`)
+                    fetch("/api/spaces/popular?limit=3")
                         .then((r) => r.json())
                         .catch(() => []),
                 ]);

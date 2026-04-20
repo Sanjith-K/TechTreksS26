@@ -191,7 +191,7 @@ export default function DiscoverPage() {
 
             const [data, popularData] = await Promise.all([
                 getSpaces(backendFilters),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/spaces/popular?limit=100`)
+                fetch("/api/spaces/popular?limit=100")
                     .then((r) => r.json())
                     .catch(() => []),
             ]);

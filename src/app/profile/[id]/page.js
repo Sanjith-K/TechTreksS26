@@ -16,7 +16,7 @@ export default function PublicProfilePage() {
     useEffect(() => {
         async function fetchProfile() {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profiles/${id}`);
+                const res = await fetch(`/api/profiles/${id}`);
 
                 if (!res.ok) {
                     throw new Error("Could not load profile.");
