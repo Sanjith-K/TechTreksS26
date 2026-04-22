@@ -17,7 +17,7 @@ export const metadata = {
   title: "Be1 Space - Find Your Perfect Space",
   description: "Discover study spots, cafes, and libraries near NYU",
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon2.png",
   },
 };
 
