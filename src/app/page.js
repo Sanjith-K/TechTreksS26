@@ -87,7 +87,7 @@ export default function HomePage() {
       </section>
 
       {/* Bottom Nav */}
-      <nav className="relative z-10 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#0e1a31]/90 px-6 py-5 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl justify-around text-sm text-white/55">
 
           <Link href="/discover" className="flex flex-col items-center gap-1 hover:text-white">
