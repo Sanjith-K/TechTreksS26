@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "Be1 Space - Find Your Perfect Space",
   description: "Discover study spots, cafes, and libraries near NYU",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }) {
