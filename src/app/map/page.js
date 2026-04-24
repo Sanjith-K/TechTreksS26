@@ -31,6 +31,7 @@ function MapController({ userLocation }) {
 export default function MapPage() {
     const router = useRouter();
     const [spaces, setSpaces] = useState([]);
+    const [mapsApiKey, setMapsApiKey] = useState(null);
     const [search, setSearch] = useState("");
     const [userLocation, setUserLocation] = useState(null);
     const [locationLoading, setLocationLoading] = useState(false);
@@ -42,6 +43,13 @@ export default function MapPage() {
         price: null,     // 1 | 2 | 3
         type: null,      // "cafe" | "library" | "lounge" | "outdoor"
     });
+
+    useEffect(() => {
+        fetch("/api/maps-key")
+            .then((r) => r.json())
+            .then((d) => { if (d.key) setMapsApiKey(d.key); })
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         async function loadSpaces() {
@@ -290,7 +298,10 @@ export default function MapPage() {
                 {/* Map */}
                 <section className="mt-6 overflow-hidden rounded-3xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
                     <div className="h-[65vh] overflow-hidden rounded-2xl">
-                        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+                        {!mapsApiKey ? (
+                            <div className="flex h-full items-center justify-center text-white/40 text-sm">Loading map…</div>
+                        ) : (
+                        <APIProvider apiKey={mapsApiKey}>
                             <Map
                                 defaultCenter={{ lat: 40.7291, lng: -73.9965 }}
                                 defaultZoom={15}
@@ -364,6 +375,7 @@ export default function MapPage() {
                                 )}
                             </Map>
                         </APIProvider>
+                        )}
                     </div>
                 </section>
             </div>
