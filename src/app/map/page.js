@@ -30,25 +30,26 @@ function MapController({ userLocation }) {
 
 export default function MapPage() {
     const router = useRouter();
+    const [mapsLoaded, setMapsLoaded] = useState(false);
     const [spaces, setSpaces] = useState([]);
-    const [mapsApiKey, setMapsApiKey] = useState(null);
     const [search, setSearch] = useState("");
     const [userLocation, setUserLocation] = useState(null);
     const [locationLoading, setLocationLoading] = useState(false);
     const [selectedSpace, setSelectedSpace] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
-        noise: null,     // "silent" | "quiet" | "moderate" | "lively"
+        noise: null,
         wifi: false,
-        price: null,     // 1 | 2 | 3
-        type: null,      // "cafe" | "library" | "lounge" | "outdoor"
+        price: null,
+        type: null,
     });
 
     useEffect(() => {
-        fetch("/api/maps-key")
-            .then((r) => r.json())
-            .then((d) => { if (d.key) setMapsApiKey(d.key); })
-            .catch(console.error);
+        if (window.google?.maps) { setMapsLoaded(true); return; }
+        window.__googleMapsCallback__ = () => setMapsLoaded(true);
+        const script = document.createElement("script");
+        script.src = "/api/maps/js?callback=__googleMapsCallback__&loading=async";
+        document.head.appendChild(script);
     }, []);
 
     useEffect(() => {
@@ -298,10 +299,10 @@ export default function MapPage() {
                 {/* Map */}
                 <section className="mt-6 overflow-hidden rounded-3xl border border-white/8 bg-white/8 p-4 backdrop-blur-md">
                     <div className="h-[65vh] overflow-hidden rounded-2xl">
-                        {!mapsApiKey ? (
+                        {!mapsLoaded ? (
                             <div className="flex h-full items-center justify-center text-white/40 text-sm">Loading map…</div>
                         ) : (
-                        <APIProvider apiKey={mapsApiKey}>
+                        <APIProvider>
                             <Map
                                 defaultCenter={{ lat: 40.7291, lng: -73.9965 }}
                                 defaultZoom={15}
