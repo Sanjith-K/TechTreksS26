@@ -7,6 +7,7 @@ import { getSpaces } from "@/lib/spaces";
 import AuthButton from "../../components/AuthButton";
 import Link from "next/link";
 import SpaceCard from "../../components/SpaceCard";
+import TiltCard from "@/components/ui/tilt-card";
 import {
     House,
     Map,
@@ -14,6 +15,7 @@ import {
     Heart,
     User,
     SlidersHorizontal,
+    X,
 } from "lucide-react";
 
 const PRICE_MAP = { 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
@@ -84,21 +86,29 @@ function Section({
                 <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                     {spaces.map((space) => (
                         <Link key={space.id} href={`/stores/${space.id}`} className="block">
-                            <SpaceCard
-                                name={space.name}
-                                address={space.address}
-                                price={space.price}
-                                vibe={space.vibe}
-                                distance={space.distance}
-                                tags={space.tags}
-                                favoriteCount={favoriteCounts[space.id] ?? 0}
-                                isFavorited={favoriteIds.includes(space.id)}
-                                onToggleFavorite={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onToggleFavorite?.(space.id);
-                                }}
-                            />
+                            <TiltCard
+                                tiltLimit={8}
+                                scale={1.02}
+                                spotlight
+                                effect="gravitate"
+                                className="rounded-2xl"
+                            >
+                                <SpaceCard
+                                    name={space.name}
+                                    address={space.address}
+                                    price={space.price}
+                                    vibe={space.vibe}
+                                    distance={space.distance}
+                                    tags={space.tags}
+                                    favoriteCount={favoriteCounts[space.id] ?? 0}
+                                    isFavorited={favoriteIds.includes(space.id)}
+                                    onToggleFavorite={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onToggleFavorite?.(space.id);
+                                    }}
+                                />
+                            </TiltCard>
                         </Link>
                     ))}
                 </div>
@@ -313,6 +323,22 @@ export default function DiscoverPage() {
         setShowExtraPanel(false);
     }
 
+    useEffect(() => {
+        if (!showExtraPanel) return;
+        function onKeyDown(e) {
+            if (e.key === "Escape") setShowExtraPanel(false);
+        }
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [showExtraPanel]);
+
+    const filterChipClass = (selected) =>
+        `rounded-full px-4 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 ${
+            selected
+                ? "border-2 border-violet-400 bg-violet-600 text-white"
+                : "border border-white/15 bg-transparent text-white/60 hover:bg-white/5"
+        }`;
+
     return (
         <main className="relative min-h-screen overflow-x-hidden bg-[#07152b] text-white">
             <div className="absolute inset-0 z-0">
@@ -436,29 +462,42 @@ export default function DiscoverPage() {
                     </div>
 
                     {showExtraPanel && (
-                        <div className="mt-4 flex justify-center">
-                            <div className="w-full max-w-3xl rounded-2xl border border-white/8 bg-[#0f1b33]/85 p-6 shadow-[0_0_40px_rgba(59,130,246,0.18)] backdrop-blur-xl">
+                        <div
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                            onClick={() => setShowExtraPanel(false)}
+                        >
+                            <div
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="filters-dialog-title"
+                                className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f1b33]/95 p-6 shadow-xl backdrop-blur-xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold text-white">Filters</h3>
+                                    <h3 id="filters-dialog-title" className="text-lg font-semibold text-white">
+                                        Filters
+                                    </h3>
                                     <button
+                                        type="button"
                                         onClick={() => setShowExtraPanel(false)}
-                                        className="text-white/60 hover:text-white"
+                                        className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60"
+                                        aria-label="Close filters"
                                     >
-                                        ✕
+                                        <X size={20} strokeWidth={2} aria-hidden />
                                     </button>
                                 </div>
 
                                 <div className="mt-5">
-                                    <h4 className="text-sm text-white/70">Noise Level</h4>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {["quiet", "moderate", "lively"].map((item) => (
+                                    <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-white/45">
+                                        Noise Level
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {["silent", "quiet", "moderate", "lively"].map((item) => (
                                             <button
                                                 key={item}
+                                                type="button"
                                                 onClick={() => setNoiseFilter(item)}
-                                                className={`rounded-full border px-4 py-1.5 text-sm ${filters.noise_level === item
-                                                    ? "border-blue-400 bg-blue-600 text-white"
-                                                    : "border-white/10 bg-white/8 text-white/80"
-                                                    }`}
+                                                className={filterChipClass(filters.noise_level === item)}
                                             >
                                                 {item.charAt(0).toUpperCase() + item.slice(1)}
                                             </button>
@@ -466,44 +505,42 @@ export default function DiscoverPage() {
                                     </div>
                                 </div>
 
-                                <div className="mt-5">
-                                    <h4 className="text-sm text-white/70">Features</h4>
-                                    <div className="mt-2 flex flex-wrap gap-2">
+                                <div className="border-t border-white/10 pt-5">
+                                    <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-white/45">
+                                        Features
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
                                         <button
+                                            type="button"
                                             onClick={() => toggleBooleanFilter("wifi")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.wifi
-                                                ? "border-blue-400 bg-blue-600 text-white"
-                                                : "border-white/10 bg-white/8 text-white/80"
-                                                }`}
+                                            className={filterChipClass(filters.wifi)}
                                         >
                                             WiFi
                                         </button>
 
                                         <button
+                                            type="button"
                                             onClick={() => toggleBooleanFilter("laptop_friendly")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.laptop_friendly
-                                                ? "border-blue-400 bg-blue-600 text-white"
-                                                : "border-white/10 bg-white/8 text-white/80"
-                                                }`}
+                                            className={filterChipClass(filters.laptop_friendly)}
                                         >
                                             Laptop OK
                                         </button>
 
                                         <button
+                                            type="button"
                                             onClick={() => toggleBooleanFilter("nyu_discount")}
-                                            className={`rounded-full border px-4 py-1.5 text-sm ${filters.nyu_discount
-                                                ? "border-blue-400 bg-blue-600 text-white"
-                                                : "border-white/10 bg-white/8 text-white/80"
-                                                }`}
+                                            className={filterChipClass(filters.nyu_discount)}
                                         >
                                             NYU Discount
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="mt-5">
-                                    <h4 className="text-sm text-white/70">Price</h4>
-                                    <div className="mt-2 flex gap-2">
+                                <div className="border-t border-white/10 pt-5">
+                                    <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-white/45">
+                                        Price
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
                                         {[
                                             { label: "$", value: 1 },
                                             { label: "$$", value: 2 },
@@ -512,6 +549,7 @@ export default function DiscoverPage() {
                                         ].map(({ label, value }) => (
                                             <button
                                                 key={label}
+                                                type="button"
                                                 onClick={() =>
                                                     setFilters((prev) => ({
                                                         ...prev,
@@ -519,26 +557,26 @@ export default function DiscoverPage() {
                                                         budget: value === 1 ? prev.price_range !== 1 : false,
                                                     }))
                                                 }
-                                                className={`rounded-full border px-4 py-1.5 text-sm ${filters.price_range === value
-                                                    ? "border-blue-400 bg-blue-600 text-white"
-                                                    : "border-white/10 bg-white/8 text-white/80"
-                                                    }`}
+                                                className={filterChipClass(filters.price_range === value)}
                                             >
                                                 {label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                                <div className="mt-6 flex gap-3">
+
+                                <div className="mt-6 flex flex-col gap-3">
                                     <button
+                                        type="button"
                                         onClick={clearFilters}
-                                        className="flex-1 rounded-full border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/5"
+                                        className="self-start text-sm text-white/55 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1b33]"
                                     >
                                         Clear
                                     </button>
                                     <button
+                                        type="button"
                                         onClick={applyFilters}
-                                        className="flex-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                                        className="w-full rounded-full bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1b33]"
                                     >
                                         Apply
                                     </button>
