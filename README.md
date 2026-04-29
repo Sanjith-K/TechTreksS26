@@ -1,4 +1,4 @@
-# Be1 Space
+# Be1 Space ⭐️🛸
 [find your perfect space here](https://be1space.vercel.app/)
 
 **Be1 Space** is a study spot discovery platform built for NYU students. Find cafes, libraries, lounges, and coworking spaces around Washington Square — filter by noise level, WiFi, price, and more, then save your favorites.
